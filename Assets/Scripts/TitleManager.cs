@@ -42,7 +42,7 @@ public class TitleManager : MonoBehaviourPunCallbacks
         // 초기 상태 설정
         if (CreateCodeText != null)
         {
-            CreateCodeText.text = "코드를 생성하세요";
+            CreateCodeText.text = "코드를 생성하거나 입력하세요";
         }
 
         // 포톤 연결 상태 확인

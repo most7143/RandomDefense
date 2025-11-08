@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6647824691764441149}
   - component: {fileID: 7972260054719178406}
   - component: {fileID: 5507032391940299191}
+  - component: {fileID: 6152093040392185947}
   m_Layer: 0
   m_Name: Bird
   m_TagString: Untagged
@@ -136,3 +137,19 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &6152093040392185947
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2687127192478811734}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89574a0d55fa8524c8f4339d4903fce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Monster
+  Level: 1
+  HP: 1
+  MoveSpeed: 1
+  MovePoints: []

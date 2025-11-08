@@ -282,6 +282,12 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.veriorpies.parrelsync": {
+      "version": "file:C:/Users/ender/Downloads/ParrelSync-master/ParrelSync-master/ParrelSync",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
       "depth": 0,

@@ -25,25 +25,41 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
     private int currentRound = 1;
     private bool isSpawning = false;
     private int monstersSpawnedThisRound = 0;
+
+    [Header("Move Points")]
+    [Tooltip("몬스터 이동 경로 포인트들")]
+    public Transform[] MovePoints;
+    
+    private PhotonView pv;
     
     void Start()
     {
-        // 포톤에 연결되어 있고 마스터 클라이언트인 경우에만 시작
-        if (PhotonNetwork.IsConnected && PhotonNetwork.IsMasterClient)
+        // PhotonView 컴포넌트 가져오기
+        pv = GetComponent<PhotonView>();
+        
+        // PhotonView가 없으면 추가
+        if (pv == null)
+        {
+            pv = gameObject.AddComponent<PhotonView>();
+            pv.ViewID = PhotonNetwork.AllocateViewID(0);
+        }
+        
+        // 포톤에 연결되어 있고 이 스포너를 소유한 클라이언트인 경우에만 시작
+        if (PhotonNetwork.IsConnected && pv.IsMine)
         {
             StartCoroutine(StartRound(currentRound));
         }
-        else
+        else if (!PhotonNetwork.IsConnected)
         {
-            Debug.Log("MonsterSpawner: 포톤에 연결되어 있지 않거나 마스터 클라이언트가 아닙니다.");
+            PhotonNetwork.ConnectUsingSettings();
+            Debug.Log("MonsterSpawner: 포톤에 연결 중...");
         }
-
     }
     
-    public override void OnMasterClientSwitched(Photon.Realtime.Player newMasterClient)
+    public override void OnConnectedToMaster()
     {
-        // 마스터 클라이언트가 변경되면 새 마스터 클라이언트가 스폰을 계속
-        if (PhotonNetwork.IsMasterClient && !isSpawning)
+        // 포톤에 연결되면 스폰 시작
+        if (pv != null && pv.IsMine && !isSpawning)
         {
             StartCoroutine(StartRound(currentRound));
         }
@@ -52,6 +68,10 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
     IEnumerator StartRound(int round)
     {
         if (isSpawning)
+            yield break;
+            
+        // 이 스포너를 소유한 클라이언트가 아니면 중단
+        if (pv == null || !pv.IsMine)
             yield break;
             
         isSpawning = true;
@@ -63,14 +83,14 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         // 해당 라운드의 몬스터 수 가져오기
         int monstersToSpawn = GetMonstersForRound(round);
         
-        Debug.Log($"라운드 {round} 시작: {monstersToSpawn}마리 스폰 예정");
+        Debug.Log($"[스포너 {PhotonNetwork.LocalPlayer.ActorNumber}] 라운드 {round} 시작: {monstersToSpawn}마리 스폰 예정");
         
         // 몬스터 스폰
         for (int i = 0; i < monstersToSpawn; i++)
         {
-            if (!PhotonNetwork.IsMasterClient)
+            // 이 스포너를 소유한 클라이언트가 아니면 중단
+            if (pv == null || !pv.IsMine)
             {
-                // 마스터 클라이언트가 아니면 중단
                 break;
             }
             
@@ -82,10 +102,10 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         }
         
         isSpawning = false;
-        Debug.Log($"라운드 {round} 완료: {monstersSpawnedThisRound}마리 스폰됨");
+        Debug.Log($"[스포너 {PhotonNetwork.LocalPlayer.ActorNumber}] 라운드 {round} 완료: {monstersSpawnedThisRound}마리 스폰됨");
     }
     
-    void SpawnMonster()
+   void SpawnMonster()
     {
         if (monsterPrefab == null)
         {
@@ -106,7 +126,25 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         
         if (monster != null)
         {
-            Debug.Log($"몬스터 스폰됨: {monster.name} at {spawnPosition}");
+            // 생성된 몬스터에 MovePoints 전달 (RPC 사용)
+            PhotonView monsterPV = monster.GetComponent<PhotonView>();
+            if (monsterPV != null && MovePoints != null && MovePoints.Length > 0)
+            {
+                // Transform 배열을 Vector3 배열로 변환
+                Vector3[] movePointPositions = new Vector3[MovePoints.Length];
+                for (int i = 0; i < MovePoints.Length; i++)
+                {
+                    if (MovePoints[i] != null)
+                    {
+                        movePointPositions[i] = MovePoints[i].position;
+                    }
+                }
+                
+                // 모든 클라이언트에서 MovePoints 설정
+                monsterPV.RPC("SetMovePoints", RpcTarget.AllBuffered, movePointPositions);
+            }
+            
+            Debug.Log($"[스포너 {PhotonNetwork.LocalPlayer.ActorNumber}] 몬스터 스폰됨: {monster.name} at {spawnPosition}");
         }
     }
     
@@ -153,7 +191,7 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
     [PunRPC]
     public void StartNextRound()
     {
-        if (PhotonNetwork.IsMasterClient && !isSpawning)
+        if (pv != null && pv.IsMine && !isSpawning)
         {
             currentRound++;
             StartCoroutine(StartRound(currentRound));
@@ -163,13 +201,13 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
     // 공개 메서드: 다음 라운드 시작 (모든 클라이언트에서 호출 가능)
     public void RequestNextRound()
     {
-        if (PhotonNetwork.IsMasterClient)
+        if (pv != null && pv.IsMine)
         {
             StartNextRound();
         }
-        else
+        else if (pv != null)
         {
-            photonView.RPC("StartNextRound", RpcTarget.MasterClient);
+            pv.RPC("StartNextRound", RpcTarget.Others);
         }
     }
     
