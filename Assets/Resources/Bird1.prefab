@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 5507032391940299191}
   - component: {fileID: 6152093040392185947}
   m_Layer: 0
-  m_Name: Bird
+  m_Name: Bird1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -149,7 +149,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 89574a0d55fa8524c8f4339d4903fce9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Monster
+  Name: 0
   Level: 1
   HP: 1
   MoveSpeed: 1
-  MovePoints: []

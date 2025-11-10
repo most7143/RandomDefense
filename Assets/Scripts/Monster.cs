@@ -5,11 +5,12 @@ using UnityEngine.InputSystem.iOS;
 
 public class Monster : MonoBehaviourPunCallbacks
 {
+    public MonsterNames Name;
     public int Level;
     public float HP;
     public float MoveSpeed = 2f;
 
-    public Transform[] MovePoints;
+
 
     private Animator animator;
 
@@ -23,6 +24,7 @@ public class Monster : MonoBehaviourPunCallbacks
 
     void Start()
     {
+
         pv = GetComponent<PhotonView>();
 
         if (pv == null)
@@ -31,32 +33,14 @@ public class Monster : MonoBehaviourPunCallbacks
             return;
         }
 
-        // MovePoints가 설정되지 않았거나 비어있으면 경고
-        if (MovePoints == null || MovePoints.Length == 0)
-        {
-            if (movePointPositions != null && movePointPositions.Length > 0)
-            {
-                MovePoints = new Transform[movePointPositions.Length];
-                for (int i = 0; i < movePointPositions.Length; i++)
-                {
-                    GameObject pointObj = new GameObject($"MovePoint_{i}");
-                    pointObj.transform.position = movePointPositions[i];
-                    MovePoints[i] = pointObj.transform;
-                }
-            }
-            else
-            {
-                Debug.LogWarning("Monster: MovePoints가 설정되지 않았습니다!");
-                return;
-            }
-        }
+       
 
         // 마스터일 때만 시작 위치 설정
         if (PhotonNetwork.IsMasterClient)
         {
-            if (MovePoints.Length > 0 && MovePoints[0] != null)
+            if (movePointPositions.Length > 0 && movePointPositions[0] != null)
             {
-                transform.position = MovePoints[0].position;
+                transform.position = movePointPositions[0];
                 currentTargetIndex = 1;
             }
         }
@@ -94,17 +78,17 @@ public class Monster : MonoBehaviourPunCallbacks
 
     private void HandleMasterMovement()
     {
-        if (MovePoints == null || MovePoints.Length == 0)
+        if (movePointPositions == null || movePointPositions.Length == 0)
             return;
 
-        if (currentTargetIndex >= MovePoints.Length || MovePoints[currentTargetIndex] == null)
+        if (currentTargetIndex >= movePointPositions.Length || movePointPositions[currentTargetIndex] == null)
         {
             currentTargetIndex = 0;
             return;
         }
 
-        Transform targetPoint = MovePoints[currentTargetIndex];
-        Vector3 direction = (targetPoint.position - transform.position).normalized;
+        Vector3 targetPoint = movePointPositions[currentTargetIndex];
+        Vector3 direction = (targetPoint - transform.position).normalized;
         transform.position += direction * MoveSpeed * Time.deltaTime;
 
         if (direction != Vector3.zero)
@@ -112,10 +96,10 @@ public class Monster : MonoBehaviourPunCallbacks
             transform.rotation = Quaternion.LookRotation(direction);
         }
 
-        float distanceToTarget = Vector3.Distance(transform.position, targetPoint.position);
+        float distanceToTarget = Vector3.Distance(transform.position, targetPoint);
         if (distanceToTarget <= reachedDistance)
         {
-            currentTargetIndex = (currentTargetIndex + 1) % MovePoints.Length;
+            currentTargetIndex = (currentTargetIndex + 1) % movePointPositions.Length;
         }
 
         // 위치를 다른 클라이언트에게 전송
@@ -128,25 +112,13 @@ public class Monster : MonoBehaviourPunCallbacks
         targetPosition = newPos;
     }
 
-    public void GetMovePoints(Transform[] points)
-    {
-        MovePoints = points;
-    }
 
     [PunRPC]
     public void SetMovePoints(Vector3[] positions)
     {
         movePointPositions = positions;
 
-        if (positions != null && positions.Length > 0)
-        {
-            MovePoints = new Transform[positions.Length];
-            for (int i = 0; i < positions.Length; i++)
-            {
-                GameObject pointObj = new GameObject($"MovePoint_{i}");
-                pointObj.transform.position = positions[i];
-                MovePoints[i] = pointObj.transform;
-            }
-        }
+        Debug.Log(" 이동 위치 설정");
     }
+
 }

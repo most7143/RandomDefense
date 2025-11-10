@@ -5,12 +5,10 @@ using System.Collections;
 public class MonsterSpawner : MonoBehaviourPunCallbacks
 {
     [Header("Monster Settings")]
-    [Tooltip("스폰할 몬스터 프리팹 (PhotonView가 있어야 함)")]
-    public GameObject monsterPrefab;
+    [Tooltip("스폰할 몬스터 타입 (Resources 폴더에서 프리팹을 로드합니다)")]
+    public MonsterNames MonsterType = MonsterNames.Bird1;
+
     
-    [Header("Spawn Settings")]
-    [Tooltip("스폰 포인트들 (Transform 배열)")]
-    public Transform[] spawnPoints;
     
     [Tooltip("라운드별 몬스터 수 (인덱스 0 = 라운드 1)")]
     public int[] monstersPerRound = new int[] { 40 };
@@ -107,19 +105,25 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
     
    void SpawnMonster()
     {
+        // MonsterNames를 문자열로 변환하여 프리팹 이름 생성
+        string prefabName = MonsterType.ToString();
+        
+        // Resources 폴더에서 프리팹 로드
+        GameObject monsterPrefab = Resources.Load<GameObject>(prefabName);
+        
         if (monsterPrefab == null)
         {
-            Debug.LogError("MonsterSpawner: 몬스터 프리팹이 설정되지 않았습니다!");
+            Debug.LogError($"MonsterSpawner: Resources 폴더에서 '{prefabName}' 프리팹을 찾을 수 없습니다!");
             return;
         }
         
         // 스폰 포인트 선택
-        Vector3 spawnPosition = GetRandomSpawnPosition();
+        Vector3 spawnPosition = transform.position;
         Quaternion spawnRotation = Quaternion.identity;
         
-        // 포톤 네트워크를 통해 몬스터 생성
+        // 포톤 네트워크를 통해 몬스터 생성 (프리팹 이름 사용)
         GameObject monster = PhotonNetwork.Instantiate(
-            monsterPrefab.name,
+            prefabName,
             spawnPosition,
             spawnRotation
         );
@@ -148,27 +152,7 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         }
     }
     
-    Vector3 GetRandomSpawnPosition()
-    {
-        if (spawnPoints != null && spawnPoints.Length > 0)
-        {
-            // 랜덤 스폰 포인트 선택
-            Transform randomSpawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
-            if (randomSpawnPoint != null)
-            {
-                return randomSpawnPoint.position;
-            }
-        }
-        
-        // 스폰 포인트가 없으면 현재 위치 주변에 랜덤하게 스폰
-        Vector3 randomOffset = new Vector3(
-            Random.Range(-5f, 5f),
-            0f,
-            Random.Range(-5f, 5f)
-        );
-        return transform.position + randomOffset;
-    }
-    
+   
     int GetMonstersForRound(int round)
     {
         if (monstersPerRound == null || monstersPerRound.Length == 0)
