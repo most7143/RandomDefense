@@ -84,7 +84,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_Sprite: {fileID: 4034257460408169424, guid: 126aba50ddd39ea4fa90c5a9780c8549, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_FlipX: 0
+  m_FlipX: 1
   m_FlipY: 0
   m_DrawMode: 0
   m_Size: {x: 1, y: 1}
@@ -149,7 +149,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 89574a0d55fa8524c8f4339d4903fce9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Monster
-  Name: 0
+  Name: 1
+  SpanwerIndex: 0
   Level: 1
   HP: 1
   MoveSpeed: 1
+  SpriteRenderer: {fileID: 6647824691764441149}
+  PV: {fileID: 5507032391940299191}
