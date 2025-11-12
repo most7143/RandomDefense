@@ -106,6 +106,9 @@ public class Monster : MonoBehaviourPunCallbacks
 
     private void HandleMovement()
     {
+
+
+        
         if (currentTargetIndex >= movePointPositions.Length)
         {
             currentTargetIndex = 0;

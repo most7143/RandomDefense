@@ -11,6 +11,10 @@ public class IngameManager : MonoBehaviourPunCallbacks
 
     public MonsterSpawner TopSpawner;
     public MonsterSpawner DownSpawner;
+
+    public UIGameFailed GameFailed;
+
+
     
     [Header("Timer Settings")]
     [Tooltip("시작 타이머 시간 (초)")]
@@ -47,7 +51,11 @@ public class IngameManager : MonoBehaviourPunCallbacks
     /// </summary>
     [SerializeField]
     private bool isBottomSpawner = true;
-    
+
+    private bool isGameFailed = false; // 게임 실패 플래그 추가
+
+    public PhotonView PV;
+
     /// <summary>
     /// 내 클라이언트가 아래쪽 스포너를 사용하는지 (항상 true)
     /// </summary>
@@ -88,7 +96,7 @@ public class IngameManager : MonoBehaviourPunCallbacks
             }
         }
 
-        if(timerStarted)
+        if(timerStarted&&!isGameFailed)
         {
    // 타이머 실행 중 (게임 시작 전)
             currentTimer -= Time.deltaTime;
@@ -217,6 +225,48 @@ public class IngameManager : MonoBehaviourPunCallbacks
     {
         return spawnerIndex == 2;
     }
+
+/// <summary>
+    /// 게임 실패 처리 (RPC로 모든 클라이언트에 호출)
+    /// </summary>
+    [PunRPC]
+    public void OnGameFailed()
+    {
+        // 중복 호출 방지
+        if (isGameFailed)
+            return;
+            
+        isGameFailed = true;
+        
+        Debug.Log("[IngameManager] 게임 실패! 모든 클라이언트에 알림");
+        
+        // 게임 실패 UI 표시
+        if (GameFailed != null)
+        {
+            GameFailed.FadeIn();
+        }
+        
+        // 타이머 정지
+        timerStarted = false;
+    }
     
-    
+    /// <summary>
+    /// 게임 실패 요청 (외부에서 호출)
+    /// </summary>
+    public void RequestGameFailed()
+    {
+        if (isGameFailed)
+            return;
+            
+        if (PV != null)
+        {
+            // 모든 클라이언트에 게임 실패 알림
+            PV.RPC("OnGameFailed", RpcTarget.All);
+        }
+        else
+        {
+            // PhotonView가 없으면 로컬에서만 호출
+            OnGameFailed();
+        }
+    }
 }

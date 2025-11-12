@@ -156,9 +156,12 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
                 break;
             }
 
-            // 전체 몬스터 수로 체크
             if(monstersSpawnedCount >= IngameManager.Instance.MaxMonsterCount)
             {
+                      if (IngameManager.Instance != null)
+             {
+                IngameManager.Instance.RequestGameFailed();
+             }
                 break;
             }
 
