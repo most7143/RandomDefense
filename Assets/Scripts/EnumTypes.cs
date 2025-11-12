@@ -5,3 +5,10 @@ public enum MonsterNames
 }
 
 
+public enum CharacterNames
+{
+    None,
+    
+}
+
+
