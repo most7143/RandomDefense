@@ -13,17 +13,16 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
     [Tooltip("스폰할 몬스터 타입 (Resources 폴더에서 프리팹을 로드합니다)")]
     public MonsterNames MonsterType = MonsterNames.Bird1;
     
-    [Tooltip("라운드별 몬스터 수 (인덱스 0 = 라운드 1)")]
-    public int[] monstersPerRound = new int[] { 40 };
+    
+    public int AliveMonsterCount = 0;
     
     [Header("Spawn Timing")]
     [Tooltip("몬스터 간 스폰 간격 (초)")]
-    public float spawnInterval = 0.5f;
-    
+    public float spawnInterval = 0.3f;
     
     private int currentRound = 1;
     private bool isSpawning = false;
-    private int monstersSpawnedThisRound = 0;
+    private int monstersSpawnedCount = 0;
 
     [Header("Move Points")]
     [Tooltip("몬스터 이동 경로 포인트들")]
@@ -141,11 +140,10 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
             yield break;
             
         isSpawning = true;
-        monstersSpawnedThisRound = 0;
         
         
         // 해당 라운드의 몬스터 수 가져오기
-        int monstersToSpawn = GetMonstersForRound(round);
+        int monstersToSpawn = 40;
         
         Debug.Log($"[스포너 {SpawnerIndex}] 라운드 {round} 시작: {monstersToSpawn}마리 스폰 예정");
         
@@ -157,16 +155,38 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
             {
                 break;
             }
+
+            // 전체 몬스터 수로 체크
+            if(monstersSpawnedCount >= IngameManager.Instance.MaxMonsterCount)
+            {
+                break;
+            }
+
             
             SpawnMonster();
-            monstersSpawnedThisRound++;
+
+            monstersSpawnedCount++;
+
+            IngameManager.Instance.UpdateMonsterCountUI(monstersSpawnedCount);
+
             
             // 다음 스폰까지 대기
             yield return new WaitForSeconds(spawnInterval);
         }
         
         isSpawning = false;
-        Debug.Log($"[스포너 {SpawnerIndex}] 라운드 {round} 완료: {monstersSpawnedThisRound}마리 스폰됨");
+
+
+        // 전체 몬스터 수로 체크
+        if(monstersSpawnedCount >= IngameManager.Instance.MaxMonsterCount)
+        {
+            Debug.Log($"[스포너 {SpawnerIndex}] 라운드 종료 최대 마리수 도달");
+        }
+        else
+        {
+            
+            Debug.Log($"[스포너 {SpawnerIndex}] 라운드 {round} 완료: {monstersSpawnedCount}마리 스폰됨");
+        }
     }
     
    void SpawnMonster()
@@ -227,6 +247,8 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
             }
             
             Debug.Log($"[스포너 {SpawnerIndex}] 몬스터 스폰됨: {monster.name} at {spawnPosition}");
+
+            AliveMonsterCount++;
         }
     }
     
@@ -257,47 +279,10 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         }
     }
    
-    int GetMonstersForRound(int round)
-    {
-        if (monstersPerRound == null || monstersPerRound.Length == 0)
-        {
-            return 40; // 기본값
-        }
-        
-        int roundIndex = round - 1; // 라운드 1 = 인덱스 0
-        
-        if (roundIndex >= 0 && roundIndex < monstersPerRound.Length)
-        {
-            return monstersPerRound[roundIndex];
-        }
-        
-        // 라운드가 배열 범위를 벗어나면 마지막 값 사용
-        return monstersPerRound[monstersPerRound.Length - 1];
-    }
     
-    // 다음 라운드 시작 (외부에서 호출 가능)
-    [PunRPC]
-    public void StartNextRound()
-    {
-        if (isMySpawner && !isSpawning)
-        {
-            currentRound++;
-            StartCoroutine(StartRound(currentRound));
-        }
-    }
     
-    // 공개 메서드: 다음 라운드 시작 (모든 클라이언트에서 호출 가능)
-    public void RequestNextRound()
-    {
-        if (isMySpawner)
-        {
-            StartNextRound();
-        }
-        else if (pv != null)
-        {
-            pv.RPC("StartNextRound", RpcTarget.Others);
-        }
-    }
+   
+   
 
     /// <summary>
     /// 외부에서 라운드 시작을 요청할 수 있는 메서드 (IngameManager에서 호출)
@@ -324,4 +309,6 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
     {
         return isSpawning;
     }
+    
+   
 }

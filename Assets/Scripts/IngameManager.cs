@@ -15,14 +15,26 @@ public class IngameManager : MonoBehaviourPunCallbacks
     [Header("Timer Settings")]
     [Tooltip("시작 타이머 시간 (초)")]
     public float Timer = 5f;
+
+    public float RoundTimer = 20f;
+
+    public int RoundCount = 0;
+    public int RoundMaxCount = 10;
+
+    public int MaxMonsterCount = 100;
     
     [Tooltip("타이머를 표시할 UI Text (TextMeshProUGUI 또는 Text)")]
     public TextMeshProUGUI TimerText;
+
+    public TextMeshProUGUI RoundText;
+
+    public TextMeshProUGUI MonsterCountText;
     
     private float currentTimer = 0f;
+
+
     private bool timerStarted = false;
-    private bool gameStarted = false;
-    
+
     /// <summary>
     /// 현재 클라이언트의 스포너 인덱스 (1 = 위쪽, 2 = 아래쪽)
     /// 항상 아래쪽(2)이 내 것입니다.
@@ -41,11 +53,6 @@ public class IngameManager : MonoBehaviourPunCallbacks
     /// </summary>
     public bool IsBottomSpawner => MySpawnerIndex == 2;
     
-    /// <summary>
-    /// 게임이 시작되었는지 확인
-    /// </summary>
-    public bool IsGameStarted => gameStarted;
-
     void Awake()
     {
         // 싱글톤 패턴
@@ -65,34 +72,40 @@ public class IngameManager : MonoBehaviourPunCallbacks
         // 타이머 초기화
         currentTimer = Timer;
         UpdateTimerUI();
+        UpdateMonsterCountUI(0);
     }
     
     void Update()
     {
         // 게임이 시작되지 않았고 타이머가 시작되지 않았으면 시작
-        if (!gameStarted && !timerStarted && PhotonNetwork.IsConnected && PhotonNetwork.CurrentRoom != null)
+        if ( PhotonNetwork.IsConnected && PhotonNetwork.CurrentRoom != null)
         {
             // 방에 2명이 모두 입장했을 때 타이머 시작
             if (PhotonNetwork.CurrentRoom.PlayerCount >= 2)
             {
                 StartTimer();
+                Timer=RoundTimer;
             }
         }
-        
-        // 타이머 실행 중
-        if (timerStarted && !gameStarted)
+
+        if(timerStarted)
         {
+   // 타이머 실행 중 (게임 시작 전)
             currentTimer -= Time.deltaTime;
             
             // 타이머가 0 이하가 되면 게임 시작
             if (currentTimer <= 0f)
             {
-                currentTimer = 0f;
+                currentTimer = Timer;
+                timerStarted=false;
                 StartGame();
             }
-            
+
             UpdateTimerUI();
         }
+        
+     
+     
     }
     
     /// <summary>
@@ -104,9 +117,9 @@ public class IngameManager : MonoBehaviourPunCallbacks
             return;
             
         timerStarted = true;
-        currentTimer = Timer;
+
         UpdateTimerUI();
-        Debug.Log($"[IngameManager] 타이머 시작: {Timer}초");
+        Debug.Log($"[IngameManager] 타이머 시작: {currentTimer}초");
     }
     
     /// <summary>
@@ -114,13 +127,18 @@ public class IngameManager : MonoBehaviourPunCallbacks
     /// </summary>
     private void StartGame()
     {
-        if (gameStarted)
+        RoundCount++;
+
+        if (RoundCount >= RoundMaxCount)
+        {
+            Debug.Log("[IngameManager] 최대 라운드 도달!");
             return;
-            
-        gameStarted = true;
-        timerStarted = false;
+        }
+
         
-        Debug.Log("[IngameManager] 게임 시작! 양쪽 스포너 시작");
+        Debug.Log($"[IngameManager] 라운드 {RoundCount} 시작! 양쪽 스포너 시작");
+
+        UpdateRoundUI();
         
         // 양쪽 스포너 시작 (각 스포너가 자신의 소유권을 확인하여 시작)
         if (TopSpawner != null)
@@ -152,6 +170,28 @@ public class IngameManager : MonoBehaviourPunCallbacks
         }
     }
     
+    /// <summary>
+    /// 라운드 UI 업데이트
+    /// </summary>
+    private void UpdateRoundUI()
+    {
+        if (RoundText != null)
+        {
+            RoundText.text = string.Format("Round {0}", RoundCount);
+        }
+    }
+    
+    /// <summary>
+    /// 몬스터 카운트 UI 업데이트
+    /// </summary>
+    public void UpdateMonsterCountUI(int monsterCount)
+    {
+        if (MonsterCountText != null)
+        {
+            MonsterCountText.text = string.Format("{0} / {1}", monsterCount, MaxMonsterCount);
+        }
+    }
+    
     void OnValidate()
     {
         // 에디터에서 자동으로 업데이트
@@ -178,21 +218,5 @@ public class IngameManager : MonoBehaviourPunCallbacks
         return spawnerIndex == 2;
     }
     
-    public override void OnJoinedRoom()
-    {
-        // 방에 입장하면 타이머 시작 체크
-        if (PhotonNetwork.CurrentRoom.PlayerCount >= 2)
-        {
-            StartTimer();
-        }
-    }
     
-    public override void OnPlayerEnteredRoom(Player newPlayer)
-    {
-        // 다른 플레이어가 입장하면 타이머 시작
-        if (PhotonNetwork.CurrentRoom.PlayerCount >= 2 && !timerStarted)
-        {
-            StartTimer();
-        }
-    }
 }
