@@ -14,6 +14,10 @@ public class IngameManager : MonoBehaviourPunCallbacks
 
     public UIGameFailed GameFailed;
 
+    public PlayerController PlayerController;
+
+    public TileGroupController TileGroupController;
+
 
     
     [Header("Timer Settings")]

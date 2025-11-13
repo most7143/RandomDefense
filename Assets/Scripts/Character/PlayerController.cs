@@ -4,10 +4,16 @@ public class PlayerController : MonoBehaviour
 {
     [Header("Settings")]
     [Tooltip("레이어 마스크: 플레이어 캐릭터를 선택하기 위한 레이어")]
-    public LayerMask characterLayerMask = -1;
+    public LayerMask CharacterLayerMask = -1;
+    
+    [Tooltip("레이어 마스크: 타일을 감지하기 위한 레이어")]
+    public LayerMask TileLayerMask = -1;
     
     [Tooltip("카메라 참조 (없으면 Camera.main 사용)")]
     public Camera mainCamera;
+    
+    [Tooltip("타일 그룹 컨트롤러 참조")]
+    public TileGroupController TileGroupController;
     
     public PlayerCharacter SelectedCharcter;
 
@@ -22,6 +28,7 @@ public class PlayerController : MonoBehaviour
     private Vector3 startWorldPosition; // 드래그 시작 월드 좌표
     private bool isDragging = false;
     private bool hasSelectedCharacter = false;
+    private Tile currentTargetTile = null; // 현재 타겟 타일
 
     void Start()
     {
@@ -84,7 +91,7 @@ public class PlayerController : MonoBehaviour
         Vector2 mousePos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
 
 
-    RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero, Mathf.Infinity, characterLayerMask);
+    RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero, Mathf.Infinity, CharacterLayerMask);
 
     if (hit.collider != null)
     {
@@ -101,8 +108,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // 아무것도 선택되지 않으면 해제
-    DeselectCharacter();
+       DeselectCharacter();
     }
     /// <summary>
     /// 마우스 드래그 중
@@ -118,9 +124,14 @@ public class PlayerController : MonoBehaviour
         float dragDistance = Vector3.Distance(startDragPosition, currentDragPosition);
         if (dragDistance > 10f) // 10픽셀 이상 드래그하면 이동 시작
         {
-            isDragging = true;
+            if (!isDragging)
+            {
+                // 드래그 시작 시 모든 타일 표시
+                isDragging = true;
+                ShowAllTiles();
+            }
             
-            // LineRenderer 업데이트
+            // 타일이 타겟되었을 때만 라인 렌더러 업데이트
             UpdateDragLine();
         }
         else
@@ -142,15 +153,73 @@ public class PlayerController : MonoBehaviour
         Vector2 mouseWorldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
         Vector3 endWorldPosition = new Vector3(mouseWorldPos.x, mouseWorldPos.y, SelectedCharcter.transform.position.z);
         
-        // 시작 위치는 캐릭터 위치
-        Vector3 startPos = startWorldPosition;
+        // 타일 콜라이더 감지
+        CheckTileCollider(mouseWorldPos, ref endWorldPosition);
         
-        // LineRenderer 위치 설정
-        LineRenderer.SetPosition(0, startPos);
-        LineRenderer.SetPosition(1, endWorldPosition);
+        // 타일이 타겟되었을 때만 라인 렌더러 표시
+        // 다음 타겟이 정해질 때까지 이전 타겟으로 고정
+        if (currentTargetTile != null)
+        {
+            // 시작 위치는 캐릭터 위치
+            Vector3 startPos = startWorldPosition;
+            
+            // 끝 위치는 현재 타겟 타일 위치 (고정)
+            Vector3 targetPos = currentTargetTile.transform.position;
+            targetPos.z = SelectedCharcter.transform.position.z;
+            
+            // LineRenderer 위치 설정
+            LineRenderer.SetPosition(0, startPos);
+            LineRenderer.SetPosition(1, targetPos);
+            
+            // LineRenderer 활성화
+            LineRenderer.enabled = true;
+        }
+        else
+        {
+            // 타일이 타겟되지 않았으면 라인 렌더러 숨김
+            LineRenderer.enabled = false;
+        }
+    }
+
+    /// <summary>
+    /// 타일 콜라이더 감지 및 타겟 렌더러 제어
+    /// </summary>
+    private void CheckTileCollider(Vector2 mouseWorldPos, ref Vector3 endWorldPosition)
+    {
+        // 모든 레이어를 포함한 레이캐스트로 모든 충돌체 가져오기
+        RaycastHit2D[] hits = Physics2D.RaycastAll(mouseWorldPos, Vector2.zero, Mathf.Infinity);
         
-        // LineRenderer 활성화
-        LineRenderer.enabled = true;
+        Tile foundTile = null;
+        
+        // 타일을 우선적으로 찾기
+        foreach (RaycastHit2D hit in hits)
+        {
+            // 타일 레이어 마스크에 포함되어 있는지 확인
+            if ((TileLayerMask.value & (1 << hit.collider.gameObject.layer)) != 0)
+            {
+                Tile tile = hit.collider.GetComponent<Tile>();
+                if (tile != null)
+                {
+                    foundTile = tile;
+                    break; // 타일을 찾으면 즉시 종료
+                }
+            }
+        }
+        
+        if (foundTile != null)
+        {
+            // 새 타일로 변경
+            if (currentTargetTile != foundTile)
+            {
+                // 새 타일로 변경 및 타겟 하이라이트 활성화
+                currentTargetTile = foundTile;
+                ShowTargetHighlight(foundTile.transform.position);
+            }
+            
+            // 도착지점을 타일 중앙으로 고정
+            endWorldPosition = foundTile.transform.position;
+            endWorldPosition.z = SelectedCharcter.transform.position.z;
+        }
     }
     
     /// <summary>
@@ -165,6 +234,62 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
+    /// 모든 타일 표시 (드래그 중)
+    /// </summary>
+    private void ShowAllTiles()
+    {
+        if (TileGroupController != null && TileGroupController.Tiles != null)
+        {
+            foreach (var tile in TileGroupController.Tiles)
+            {
+                if (tile != null && tile.Renderer != null)
+                {
+                    tile.Renderer.enabled = true;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 모든 타일 숨김
+    /// </summary>
+    private void HideAllTiles()
+    {
+        if (TileGroupController != null && TileGroupController.Tiles != null)
+        {
+            foreach (var tile in TileGroupController.Tiles)
+            {
+                if (tile != null && tile.Renderer != null)
+                {
+                    tile.Renderer.enabled = false;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 타겟 하이라이트 표시
+    /// </summary>
+    private void ShowTargetHighlight(Vector3 position)
+    {
+        if (TileGroupController != null)
+        {
+            TileGroupController.ShowTargetTile(position);
+        }
+    }
+
+    /// <summary>
+    /// 타겟 하이라이트 숨김
+    /// </summary>
+    private void HideTargetHighlight()
+    {
+        if (TileGroupController != null)
+        {
+            TileGroupController.HideTargetTile();
+        }
+    }
+
+    /// <summary>
     /// 마우스 버튼을 뗐을 때 (이동 명령)
     /// </summary>
     private void OnMouseUp()
@@ -174,27 +299,37 @@ public class PlayerController : MonoBehaviour
 
         if (isDragging)
         {
-            // 드래그로 이동 명령 (2D)
-            Vector2 mouseWorldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
-            
-            // 2D 레이캐스트로 이동 목표 지점 결정
-            RaycastHit2D hit = Physics2D.Raycast(mouseWorldPos, Vector2.zero, Mathf.Infinity);
-            
-            if (hit.collider != null)
+            // 타일이 타겟으로 설정되어 있지 않으면 이동하지 않음
+            if (currentTargetTile == null)
             {
-                Vector3 targetPosition = hit.point;
-                // Z 좌표는 캐릭터의 현재 Z 좌표 유지 (2D 게임에서 깊이 유지)
-                targetPosition.z = SelectedCharcter.transform.position.z;
-                SelectedCharcter.MoveTo(targetPosition);
+                // 타겟 하이라이트 비활성화
+                HideTargetHighlight();
+                
+                // 모든 타일 숨김
+                HideAllTiles();
+                
+                // 상태 초기화
+                isDragging = false;
+                hasSelectedCharacter = false;
+                
+                // 드래그 라인 숨김
+                HideDragLine();
+                return;
             }
-            else
-            {
-                // 레이캐스트에 맞지 않으면 마우스 위치로 직접 이동
-                Vector3 targetPosition = mouseWorldPos;
-                targetPosition.z = SelectedCharcter.transform.position.z;
-                SelectedCharcter.MoveTo(targetPosition);
-            }
+            
+            // 타일이 타겟으로 설정되어 있으면 타일 위치로 이동
+            Vector3 targetPosition = currentTargetTile.transform.position;
+            targetPosition.z = SelectedCharcter.transform.position.z;
+            
+            SelectedCharcter.MoveTo(targetPosition);
         }
+        
+        // 타겟 하이라이트 비활성화
+        HideTargetHighlight();
+        currentTargetTile = null;
+        
+        // 모든 타일 숨김
+        HideAllTiles();
         
         // 상태 초기화
         isDragging = false;
@@ -237,6 +372,13 @@ public class PlayerController : MonoBehaviour
         SelectedCharcter = null;
         hasSelectedCharacter = false;
         isDragging = false;
+        
+        // 타겟 하이라이트 비활성화
+        HideTargetHighlight();
+        currentTargetTile = null;
+        
+        // 모든 타일 숨김
+        HideAllTiles();
         
         // 드래그 라인 숨김
         HideDragLine();
