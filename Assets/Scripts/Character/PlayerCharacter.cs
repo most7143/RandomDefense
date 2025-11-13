@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class PlayerCharcter : MonoBehaviour
+public class PlayerCharacter : MonoBehaviour
 {
     [Header("Character Stats")]
     public CharacterNames Name;
@@ -23,6 +23,18 @@ public class PlayerCharcter : MonoBehaviour
     private bool isSelected = false;
     private int currentMoveAnimationIndex = 0;
 
+
+    public Renderer[] ChangeMaterials;
+
+    void Start()
+    {
+        // SPUM_Prefabs 초기화
+        if (Model != null)
+        {
+            Model.OverrideControllerInit();
+        }
+    }
+
     void Update()
     {
         if (isMoving)
@@ -37,15 +49,16 @@ public class PlayerCharcter : MonoBehaviour
     public void MoveTo(Vector3 target)
     {
         targetPosition = target;
-        targetPosition.y = transform.position.y; // Y 좌표는 유지
+        // 2D 게임이므로 Z 좌표는 유지 (깊이 유지)
+        targetPosition.z = transform.position.z;
         
         isMoving = true;
         
-        // 이동 애니메이션 재생
-        if (Model != null && Model.MOVE_List != null && Model.MOVE_List.Count > 0)
+         if (Model != null && Model.MOVE_List != null && Model.MOVE_List.Count > 0)
         {
-            // 랜덤하게 이동 애니메이션 선택 (또는 순차적으로)
-            currentMoveAnimationIndex = Random.Range(0, Model.MOVE_List.Count);
+            // 애니메이션이 1개만 있으면 항상 인덱스 0 사용
+            currentMoveAnimationIndex = 0;
+            Debug.Log("이동 애니메이션 인덱스: " + currentMoveAnimationIndex);
             Model.PlayAnimation(PlayerState.MOVE, currentMoveAnimationIndex);
         }
         
@@ -54,7 +67,6 @@ public class PlayerCharcter : MonoBehaviour
         
         Debug.Log($"[PlayerCharacter] 이동 시작: {transform.position} -> {targetPosition}");
     }
-
     /// <summary>
     /// 이동 처리
     /// </summary>
@@ -71,16 +83,26 @@ public class PlayerCharcter : MonoBehaviour
             return;
         }
 
-        // 이동 방향으로 이동
-        Vector3 moveDirection = direction.normalized;
-        transform.position += moveDirection * MoveSpeed * Time.deltaTime;
+        // Lerp를 사용한 부드러운 이동
+        float moveStep = MoveSpeed * Time.deltaTime;
+        float lerpSpeed = moveStep / distance; // 거리에 따른 Lerp 속도 조절
+        transform.position = Vector3.Lerp(transform.position, targetPosition, lerpSpeed);
 
-        // 이동 방향에 따라 캐릭터 회전 (선택사항)
+        // 이동 방향에 따라 스프라이트 플립 (회전 없이)
+        Vector3 moveDirection = direction.normalized;
         if (moveDirection.magnitude > 0.1f)
         {
-            // 이동 방향을 바라보도록 회전
-            float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
-            transform.rotation = Quaternion.Euler(0, 0, angle);
+            // X 방향에 따라 플립 (오른쪽: 1, 왼쪽: -1)
+            if (moveDirection.x < 0.01f)
+            {
+                // 오른쪽으로 이동 - 정방향
+                transform.localScale = new Vector3(Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
+            }
+            else if (moveDirection.x > -0.01f)
+            {
+                // 왼쪽으로 이동 - 반전
+                transform.localScale = new Vector3(-Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
+            }
             
             // 애니메이션 방향 업데이트
             UpdateAnimationDirection();
@@ -105,13 +127,20 @@ public class PlayerCharcter : MonoBehaviour
         Debug.Log($"[PlayerCharacter] 이동 완료: {transform.position}");
     }
 
-    /// <summary>
+  /// <summary>
     /// 애니메이션 방향 업데이트 (SPUM 애니메이션 방향 설정)
     /// </summary>
     private void UpdateAnimationDirection()
     {
         if (!isMoving || Model == null)
             return;
+
+        // 애니메이션이 1개만 있으면 방향 업데이트 없이 인덱스 0 사용
+        if (Model.MOVE_List == null || Model.MOVE_List.Count <= 1)
+        {
+            currentMoveAnimationIndex = 0;
+            return;
+        }
 
         Vector3 direction = (targetPosition - transform.position).normalized;
         
@@ -123,18 +152,18 @@ public class PlayerCharcter : MonoBehaviour
         
         // 각도에 따라 애니메이션 인덱스 결정 (0-7: 8방향)
         // SPUM의 MOVE_List에 8개의 방향 애니메이션이 있다고 가정
-        if (Model.MOVE_List != null && Model.MOVE_List.Count >= 8)
+        if (Model.MOVE_List.Count >= 8)
         {
             // 각도를 0-360 범위로 정규화
             if (angle < 0) angle += 360;
             
             // 8방향으로 나누기 (각 45도)
             int directionIndex = Mathf.RoundToInt(angle / 45f) % 8;
-            currentMoveAnimationIndex = directionIndex;
+            currentMoveAnimationIndex = Mathf.Clamp(directionIndex, 0, Model.MOVE_List.Count - 1);
             
             Model.PlayAnimation(PlayerState.MOVE, currentMoveAnimationIndex);
         }
-        else if (Model.MOVE_List != null && Model.MOVE_List.Count >= 4)
+        else if (Model.MOVE_List.Count >= 4)
         {
             // 4방향으로 처리
             int directionIndex = 0;
@@ -148,8 +177,13 @@ public class PlayerCharcter : MonoBehaviour
                 // 상하
                 directionIndex = direction.y > 0 ? 1 : 3; // 위: 1, 아래: 3
             }
-            currentMoveAnimationIndex = directionIndex;
+            currentMoveAnimationIndex = Mathf.Clamp(directionIndex, 0, Model.MOVE_List.Count - 1);
             Model.PlayAnimation(PlayerState.MOVE, currentMoveAnimationIndex);
+        }
+        else
+        {
+            // 애니메이션이 2-3개만 있을 때는 인덱스 0 사용
+            currentMoveAnimationIndex = 0;
         }
     }
 
@@ -199,5 +233,14 @@ public class PlayerCharcter : MonoBehaviour
     public bool IsSelected()
     {
         return isSelected;
+    }
+
+
+    public void SetMaterial(Material material)
+    {
+        foreach (var mat in ChangeMaterials)
+        {
+            mat.material = material;
+        }
     }
 }
