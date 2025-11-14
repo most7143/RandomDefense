@@ -14,7 +14,6 @@ private void Start()
         for(int i = 0; i < Characters.Count; i++)
         {
            
-
             Tile nextSpawnTile = IngameManager.Instance.TileGroupController.GetNextSpawnTile(Characters[i]);
             if(nextSpawnTile != null)
             {

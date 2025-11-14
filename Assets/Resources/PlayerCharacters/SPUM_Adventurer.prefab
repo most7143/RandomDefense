@@ -1903,33 +1903,30 @@ GameObject:
   - component: {fileID: 2169858556044254247}
   - component: {fileID: 4875316719748868056}
   - component: {fileID: 6320052429174059545}
+  - component: {fileID: 4291536613285359631}
   m_Layer: 5
-  m_Name: SPUM_20240911215638558
+  m_Name: SPUM_Adventurer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!224 &2169858556044254247
-RectTransform:
+--- !u!4 &2169858556044254247
+Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4744537460265103821}
+  serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.008726557, z: -0, w: 0.9999619}
-  m_LocalPosition: {x: 0, y: 0, z: 0.00015256465}
+  m_LocalPosition: {x: 0, y: -170, z: 0.00015256465}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4885946371754747984}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 1, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -170}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &4875316719748868056
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4948,11 +4945,45 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6404a5aeaf255e7499c141aa0ee335f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCharcter
-  Name: 0
+  Name: 10
   Damage: 1
   AttackSpeed: 1
   AttackRange: 1
-  Model: {fileID: 0}
+  MoveSpeed: 5
+  ReachedDistance: 0.1
+  Model: {fileID: 4875316719748868056}
+  ChangeMaterials:
+  - {fileID: 2532488849006070064}
+  - {fileID: 929482420638919754}
+  - {fileID: 8012139391177235332}
+  - {fileID: 5025747472525684266}
+  - {fileID: 3287424791956906919}
+  - {fileID: 8890048955207259564}
+  - {fileID: 8023749638122516224}
+  - {fileID: 4526693768076948572}
+  - {fileID: 4574530403256084805}
+--- !u!114 &4291536613285359631
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4744537460265103821}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PhotonUnityNetworking::Photon.Pun.PhotonView
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents: []
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
 --- !u!1 &5025037695132695155
 GameObject:
   m_ObjectHideFlags: 0
@@ -5671,7 +5702,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: -50
   m_Sprite: {fileID: 21300000, guid: acb3bfd86ae6c41b084245f578292734, type: 3}
-  m_Color: {r: 0, g: 0, b: 0, a: 0.56078434}
+  m_Color: {r: 0.8, g: 0.8, b: 0.8, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0

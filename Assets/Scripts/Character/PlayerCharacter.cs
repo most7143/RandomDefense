@@ -22,13 +22,15 @@ public class PlayerCharacter : MonoBehaviour
     private bool isMoving = false;
     private bool isSelected = false;
     private int currentMoveAnimationIndex = 0;
+    
+    // 이동 완료 콜백 추가
+    public System.Action<PlayerCharacter> OnMoveCompleted;
 
 
     public Renderer[] ChangeMaterials;
 
     void Start()
     {
-        // SPUM_Prefabs 초기화
         if (Model != null)
         {
             Model.OverrideControllerInit();
@@ -125,6 +127,9 @@ public class PlayerCharacter : MonoBehaviour
         }
         
         Debug.Log($"[PlayerCharacter] 이동 완료: {transform.position}");
+        
+        // 이동 완료 콜백 호출
+        OnMoveCompleted?.Invoke(this);
     }
 
   /// <summary>
@@ -193,7 +198,6 @@ public class PlayerCharacter : MonoBehaviour
     public void OnSelected()
     {
         isSelected = true;
-        // 선택 효과 (예: 하이라이트, 아웃라인 등)
         Debug.Log($"[PlayerCharacter] 선택됨: {Name}");
     }
 
@@ -203,7 +207,6 @@ public class PlayerCharacter : MonoBehaviour
     public void OnDeselected()
     {
         isSelected = false;
-        // 선택 해제 효과
         Debug.Log($"[PlayerCharacter] 선택 해제: {Name}");
     }
 
