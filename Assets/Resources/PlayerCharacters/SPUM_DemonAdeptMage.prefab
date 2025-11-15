@@ -3369,7 +3369,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.008726557, z: -0, w: 0.9999619}
   m_LocalPosition: {x: 0, y: -170, z: 0.00015256465}
-  m_LocalScale: {x: 0.6, y: 0.6, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7647872372091437611}
@@ -6380,6 +6380,7 @@ MonoBehaviour:
   MoveSpeed: 5
   ReachedDistance: 0.1
   Model: {fileID: 681373116714757727}
+  PV: {fileID: 0}
   ChangeMaterials:
   - {fileID: 6272330702354484442}
   - {fileID: 8563237833177401848}
@@ -7184,7 +7185,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4824432935683497928}
