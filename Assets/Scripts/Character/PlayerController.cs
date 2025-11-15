@@ -431,10 +431,12 @@ public class PlayerController : MonoBehaviour
                         {
                             currentTargetTile.InTilePlayerCharacters.Add(character);
                         }
+
+                         currentTargetTile.IsEmpty = false;
                     }
                 }
                 
-                // 4. 시작 타일에 목표 타일의 캐릭터 추가 (스왑용, 즉시)
+                  // 4. 시작 타일에 목표 타일의 캐릭터 추가 (스왑용, 즉시)
                 if (shouldSwap)
                 {
                     for (int i = 0; i < targetTileCharacters.Count; i++)
@@ -447,6 +449,9 @@ public class PlayerController : MonoBehaviour
                             {
                                 startTile.InTilePlayerCharacters.Add(character);
                             }
+                            
+                            // 캐릭터가 추가되었으므로 IsEmpty를 false로 설정
+                            startTile.IsEmpty = false;
                             
                             // 시작 타일로 이동하는 캐릭터의 콜백 등록
                             character.OnMoveCompleted = OnCharacterMoveCompleted;
@@ -513,34 +518,8 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     private Vector3 CalculateCharacterPosition(Tile tile, int characterIndex)
     {
-        Vector3 tileCenter = tile.transform.position;
-        float xOffset = 0.1f;
-        float yOffset = 0.1f;
-        
-        // 현재 타일의 실제 캐릭터 수 사용
-        int totalCount = tile.InTilePlayerCharacters.Count;
-        
-        switch(totalCount)
-        {
-            case 1:
-                return tileCenter;
-            case 2:
-                // 첫 번째 캐릭터는 왼쪽, 두 번째는 오른쪽
-                if (characterIndex == 0)
-                    return tileCenter + new Vector3(-xOffset, 0, 0);
-                else
-                    return tileCenter + new Vector3(xOffset, 0, 0);
-            case 3:
-                // 첫 번째: 왼쪽 아래, 두 번째: 오른쪽 아래, 세 번째: 위
-                if (characterIndex == 0)
-                    return tileCenter + new Vector3(-xOffset, -yOffset, 0);
-                else if (characterIndex == 1)
-                    return tileCenter + new Vector3(xOffset, -yOffset, 0);
-                else
-                    return tileCenter + new Vector3(0, yOffset, 0);
-            default:
-                return tileCenter;
-        }
+        // Tile의 공통 함수 사용
+        return tile.CalculateCharacterPosition(characterIndex, tile.InTilePlayerCharacters.Count);
     }
 
    /// <summary>

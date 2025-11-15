@@ -123,16 +123,17 @@ public class UIBottomHUD : MonoBehaviour
 
                 Debug.Log("캐릭터 생성: " + characterName);
 
-                // PlayerCharacterGroup처럼 타일 찾기 및 연결
+                 // PlayerCharacterGroup처럼 타일 찾기 및 연결
                 Tile nextSpawnTile = IngameManager.Instance.TileGroupController.GetNextSpawnTile(playerCharacter);
                 if (nextSpawnTile != null)
                 {
-                    // 타일에 캐릭터 배치
-                    nextSpawnTile.SetInTilePlayerCharacters(playerCharacter);
+                    // 소환 위치 계산 (캐릭터 추가 전에 계산)
+                    int characterIndex = nextSpawnTile.InTilePlayerCharacters.Count; // 추가될 인덱스
+                    int totalCount = nextSpawnTile.InTilePlayerCharacters.Count + 1; // 추가 후 총 개수
+                    Vector3 spawnPosition = nextSpawnTile.CalculateCharacterPosition(characterIndex, totalCount);
                     
-                    // 소환 위치 계산
-                    int characterIndex = nextSpawnTile.InTilePlayerCharacters.IndexOf(playerCharacter);
-                    Vector3 spawnPosition = nextSpawnTile.GetTargetPositionForCharacter(characterIndex);
+                    // 타일에 캐릭터 배치 (이 함수 내부에서 RefreshPositionToPlayerCharacters가 호출됨)
+                    nextSpawnTile.SetInTilePlayerCharacters(playerCharacter);
                     
                     // 네트워크 동기화: 모든 클라이언트에 소환 위치 전달
                     if (characterPV != null)

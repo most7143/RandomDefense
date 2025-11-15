@@ -18,87 +18,61 @@ public class Tile : MonoBehaviour
     }
 
     /// <summary>
-    /// 캐릭터가 추가될 때의 목표 위치를 계산 (이동 전에 사용)
+    /// 캐릭터 위치 계산 (공통 함수)
     /// </summary>
-    public Vector3 GetTargetPositionForCharacter(int characterIndex)
+    /// <param name="characterIndex">캐릭터의 인덱스 (0, 1, 2)</param>
+    /// <param name="totalCharacterCount">총 캐릭터 수</param>
+    /// <returns>계산된 위치</returns>
+    public Vector3 CalculateCharacterPosition(int characterIndex, int totalCharacterCount)
     {
         Vector3 tileCenter = transform.position;
         float xOffset = 0.1f;
         float yOffset = 0.1f;
         
-        // 현재 타일의 캐릭터 수 + 추가될 캐릭터 수를 고려
-        int totalCount = InTilePlayerCharacters.Count + 1; // 추가될 캐릭터 포함
-        
-        switch(totalCount)
+        switch(totalCharacterCount)
         {
             case 1:
-                return tileCenter;
+                return new Vector3(tileCenter.x, tileCenter.y, tileCenter.z);
             case 2:
-                // 첫 번째 캐릭터는 왼쪽, 두 번째는 오른쪽
+                // 첫 번째 캐릭터는 왼쪽, 두 번째는 오른쪽 (수평 정렬)
                 if (characterIndex == 0)
-                    return tileCenter + new Vector3(-xOffset, 0, 0);
+                    return new Vector3(tileCenter.x - xOffset, tileCenter.y, tileCenter.z);
                 else
-                    return tileCenter + new Vector3(xOffset, 0, 0);
+                    return new Vector3(tileCenter.x + xOffset, tileCenter.y, tileCenter.z);
             case 3:
                 // 첫 번째: 왼쪽 아래, 두 번째: 오른쪽 아래, 세 번째: 위
                 if (characterIndex == 0)
-                    return tileCenter + new Vector3(-xOffset, -yOffset, 0);
+                    return new Vector3(tileCenter.x - xOffset, tileCenter.y - yOffset, tileCenter.z);
                 else if (characterIndex == 1)
-                    return tileCenter + new Vector3(xOffset, -yOffset, 0);
+                    return new Vector3(tileCenter.x + xOffset, tileCenter.y - yOffset, tileCenter.z);
                 else
-                    return tileCenter + new Vector3(0, yOffset, 0);
+                    return new Vector3(tileCenter.x, tileCenter.y + yOffset, tileCenter.z);
             default:
                 return tileCenter;
         }
     }
 
+    /// <summary>
+    /// 캐릭터가 추가될 때의 목표 위치를 계산 (이동 전에 사용)
+    /// </summary>
+    public Vector3 GetTargetPositionForCharacter(int characterIndex)
+    {
+        // 현재 타일의 캐릭터 수 + 추가될 캐릭터 수를 고려
+        int totalCount = InTilePlayerCharacters.Count + 1; // 추가될 캐릭터 포함
+        return CalculateCharacterPosition(characterIndex, totalCount);
+    }
+
     public void RefreshPositionToPlayerCharacters()
     {
-        Vector3 tileCenter = transform.position;
-
-        float xOffset = 0.1f;
-        float yOffset = 0.1f;
+        int characterCount = InTilePlayerCharacters.Count;
         
-        switch(InTilePlayerCharacters.Count)
+        for (int i = 0; i < characterCount; i++)
         {
-            case 1:
-                // 이동 중이 아닌 경우에만 위치 설정
-                if (InTilePlayerCharacters[0] != null && !InTilePlayerCharacters[0].IsMoving())
-                {
-                    InTilePlayerCharacters[0].transform.position = tileCenter;
-                }
-                break;
-            case 2:
-                // 첫 번째 캐릭터 위치 설정 (이동 중이 아닌 경우에만)
-                if (InTilePlayerCharacters[0] != null && !InTilePlayerCharacters[0].IsMoving())
-                {
-                    InTilePlayerCharacters[0].transform.position = tileCenter + new Vector3(-xOffset, 0, 0);
-                }
-                // 두 번째 캐릭터 위치 설정 (이동 중이 아닌 경우에만)
-                if (InTilePlayerCharacters[1] != null && !InTilePlayerCharacters[1].IsMoving())
-                {
-                    InTilePlayerCharacters[1].transform.position = tileCenter + new Vector3(xOffset, 0, 0);
-                }
-                break;
-            case 3:
-                // 첫 번째 캐릭터 위치 설정 (이동 중이 아닌 경우에만)
-                if (InTilePlayerCharacters[0] != null && !InTilePlayerCharacters[0].IsMoving())
-                {
-                      InTilePlayerCharacters[0].transform.position = tileCenter + new Vector3(-xOffset, -yOffset, 0);
-                      
-                }
-                // 두 번째 캐릭터 위치 설정 (이동 중이 아닌 경우에만)
-                if (InTilePlayerCharacters[1] != null && !InTilePlayerCharacters[1].IsMoving())
-                {
-                    InTilePlayerCharacters[1].transform.position = tileCenter + new Vector3(xOffset, -yOffset, 0);
-                }
-                // 세 번째 캐릭터 위치 설정 (이동 중이 아닌 경우에만)
-                if (InTilePlayerCharacters[2] != null && !InTilePlayerCharacters[2].IsMoving())
-                {
-                  
-                    InTilePlayerCharacters[2].transform.position = tileCenter + new Vector3(0, yOffset, 0);
-                }
-                break;
+            if (InTilePlayerCharacters[i] != null && !InTilePlayerCharacters[i].IsMoving())
+            {
+                Vector3 position = CalculateCharacterPosition(i, characterCount);
+                InTilePlayerCharacters[i].transform.position = position;
+            }
         }
         
         // 위치 갱신 후 아웃라인 업데이트 (항상 실행)
@@ -149,14 +123,19 @@ public class Tile : MonoBehaviour
     /// </summary>
 public void RemoveInTilePlayerCharacter(PlayerCharacter playerCharacter)
 {
-    if (InTilePlayerCharacters != null && InTilePlayerCharacters.Contains(playerCharacter))
+     if (InTilePlayerCharacters != null && InTilePlayerCharacters.Contains(playerCharacter))
     {
         InTilePlayerCharacters.Remove(playerCharacter);
         
         // 리스트가 비어있으면 IsEmpty를 true로 설정
+        // 하지만 리스트에 캐릭터가 있으면 false로 설정
         if (InTilePlayerCharacters.Count == 0)
         {
             IsEmpty = true;
+        }
+        else
+        {
+            IsEmpty = false; // 캐릭터가 있으면 비어있지 않음
         }
         
         // 위치 갱신 (아웃라인은 RefreshPositionToPlayerCharacters에서 처리)
