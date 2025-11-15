@@ -137,6 +137,8 @@ public class Tile : MonoBehaviour
         }
         
         InTilePlayerCharacters.Add(playerCharacter);
+
+        IsEmpty = false;
         
         // 위치 갱신 (이동 중이 아닌 경우에만 위치 설정, 아웃라인은 항상 업데이트)
         RefreshPositionToPlayerCharacters();
@@ -145,19 +147,27 @@ public class Tile : MonoBehaviour
     /// <summary>
     /// 타일에서 캐릭터 제거
     /// </summary>
-    public void RemoveInTilePlayerCharacter(PlayerCharacter playerCharacter)
+public void RemoveInTilePlayerCharacter(PlayerCharacter playerCharacter)
+{
+    if (InTilePlayerCharacters != null && InTilePlayerCharacters.Contains(playerCharacter))
     {
-        if (InTilePlayerCharacters != null && InTilePlayerCharacters.Contains(playerCharacter))
+        InTilePlayerCharacters.Remove(playerCharacter);
+        
+        // 리스트가 비어있으면 IsEmpty를 true로 설정
+        if (InTilePlayerCharacters.Count == 0)
         {
-            InTilePlayerCharacters.Remove(playerCharacter);
-            // 위치 갱신 (아웃라인은 RefreshPositionToPlayerCharacters에서 처리)
-            RefreshPositionToPlayerCharacters();
+            IsEmpty = true;
         }
+        
+        // 위치 갱신 (아웃라인은 RefreshPositionToPlayerCharacters에서 처리)
+        RefreshPositionToPlayerCharacters();
     }
+}
 
     public void ClearInTilePlayerCharacters()
     {
         InTilePlayerCharacters.Clear();
+        IsEmpty = true;
     }
 
     /// <summary>

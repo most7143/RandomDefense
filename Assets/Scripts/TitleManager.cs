@@ -16,8 +16,8 @@ public class TitleManager : MonoBehaviourPunCallbacks
     public Button JoinCodeButton;
 
     [Header("Scene Settings")]
-    [Tooltip("메인씬 이름 (예: MainScene)")]
-    public string mainSceneName = "MainScene";
+    [Tooltip("로딩씬 이름 (예: LoadingScene)")]
+    public string loadingSceneName = "LoadingScene";
 
     private int roomCode;
     private bool isConnecting = false;
@@ -180,11 +180,14 @@ public class TitleManager : MonoBehaviourPunCallbacks
         Debug.Log($"방 입장 성공: {PhotonNetwork.CurrentRoom.Name}");
         Debug.Log($"현재 플레이어 수: {PhotonNetwork.CurrentRoom.PlayerCount}/{PhotonNetwork.CurrentRoom.MaxPlayers}");
 
-        // 2명이 모두 입장했으면 메인씬으로 이동
+        // 로딩 준비 상태 초기화 (이전 게임의 상태 제거)
+        ResetLoadingReadyState();
+
+        // 2명이 모두 입장했으면 로딩씬으로 이동
         if (PhotonNetwork.CurrentRoom.PlayerCount == 2)
         {
-            Debug.Log("2명이 모두 입장했습니다. 메인씬으로 이동합니다.");
-            LoadMainScene();
+            Debug.Log("2명이 모두 입장했습니다. 로딩씬으로 이동합니다.");
+            LoadLoadingScene();
         }
     }
 
@@ -196,11 +199,14 @@ public class TitleManager : MonoBehaviourPunCallbacks
         Debug.Log($"플레이어 입장: {newPlayer.NickName}");
         Debug.Log($"현재 플레이어 수: {PhotonNetwork.CurrentRoom.PlayerCount}/{PhotonNetwork.CurrentRoom.MaxPlayers}");
 
-        // 2명이 모두 입장했으면 메인씬으로 이동
+        // 로딩 준비 상태 초기화 (이전 게임의 상태 제거)
+        ResetLoadingReadyState();
+
+        // 2명이 모두 입장했으면 로딩씬으로 이동
         if (PhotonNetwork.CurrentRoom.PlayerCount == 2)
         {
-            Debug.Log("2명이 모두 입장했습니다. 메인씬으로 이동합니다.");
-            LoadMainScene();
+            Debug.Log("2명이 모두 입장했습니다. 로딩씬으로 이동합니다.");
+            LoadLoadingScene();
         }
     }
 
@@ -252,20 +258,39 @@ public class TitleManager : MonoBehaviourPunCallbacks
     #endregion
 
     /// <summary>
-    /// 메인씬으로 이동
+    /// 로딩 준비 상태 초기화
     /// </summary>
-    void LoadMainScene()
+    private void ResetLoadingReadyState()
     {
-        if (!string.IsNullOrEmpty(mainSceneName))
+        const string LOADING_READY_KEY = "LoadingReady";
+        
+        // 로컬 플레이어의 로딩 준비 상태 초기화
+        ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
+        props[LOADING_READY_KEY] = false;
+        PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+        
+        Debug.Log("[TitleManager] 로딩 준비 상태 초기화");
+    }
+
+    /// <summary>
+    /// 로딩씬으로 이동
+    /// </summary>
+    void LoadLoadingScene()
+    {
+        if (!string.IsNullOrEmpty(loadingSceneName))
         {
-            PhotonNetwork.LoadLevel(mainSceneName);
+            // 씬 로드 전에 로딩 준비 상태를 false로 설정 (안전장치)
+            ResetLoadingReadyState();
+            
+            PhotonNetwork.LoadLevel(loadingSceneName);
         }
         else
         {
-            Debug.LogError("메인씬 이름이 설정되지 않았습니다!");
+            Debug.LogError("로딩씬 이름이 설정되지 않았습니다!");
         }
     }
 
+  
     void OnDestroy()
     {
         // 버튼 이벤트 해제

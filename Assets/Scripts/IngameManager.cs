@@ -5,6 +5,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using System.Collections;
 
+
 public class IngameManager : MonoBehaviourPunCallbacks
 {
     public static IngameManager Instance { get; private set; }
@@ -87,37 +88,62 @@ public class IngameManager : MonoBehaviourPunCallbacks
         UpdateMonsterCountUI(0);
     }
     
-    void Update()
+      void Update()
     {
         // 게임이 시작되지 않았고 타이머가 시작되지 않았으면 시작
-        if ( PhotonNetwork.IsConnected && PhotonNetwork.CurrentRoom != null)
+        if (PhotonNetwork.IsConnected && PhotonNetwork.CurrentRoom != null)
         {
-            // 방에 2명이 모두 입장했을 때 타이머 시작
+            // 방에 2명이 모두 입장했고, LoadingManager에서 모든 플레이어가 준비되었는지 확인
             if (PhotonNetwork.CurrentRoom.PlayerCount >= 2)
             {
-                StartTimer();
-                Timer=RoundTimer;
+                // LoadingManager 확인
+                LoadingManager loadingManager = FindObjectOfType<LoadingManager>();
+                if (loadingManager == null || IsAllPlayersReady())
+                {
+                    StartTimer();
+                    Timer = RoundTimer;
+                }
             }
         }
 
-        if(timerStarted&&!isGameFailed)
+        if(timerStarted && !isGameFailed)
         {
-   // 타이머 실행 중 (게임 시작 전)
+            // 타이머 실행 중 (게임 시작 전)
             currentTimer -= Time.deltaTime;
             
             // 타이머가 0 이하가 되면 게임 시작
             if (currentTimer <= 0f)
             {
                 currentTimer = Timer;
-                timerStarted=false;
+                timerStarted = false;
                 StartGame();
             }
 
             UpdateTimerUI();
         }
+    }
+    
+    /// <summary>
+    /// 모든 플레이어가 로딩 준비되었는지 확인
+    /// </summary>
+    private bool IsAllPlayersReady()
+    {
+        if (PhotonNetwork.CurrentRoom == null || PhotonNetwork.CurrentRoom.PlayerCount < 2)
+            return false;
+            
+        const string LOADING_READY_KEY = "LoadingReady";
         
-     
-     
+        foreach (Player player in PhotonNetwork.PlayerList)
+        {
+            if (!player.CustomProperties.ContainsKey(LOADING_READY_KEY))
+                return false;
+                
+            bool playerReady = (bool)player.CustomProperties[LOADING_READY_KEY];
+            if (!playerReady)
+                return false;
+        }
+        
+        return true;
     }
     
     /// <summary>

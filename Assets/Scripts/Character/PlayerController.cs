@@ -369,10 +369,26 @@ public class PlayerController : MonoBehaviour
                 // 이동할 캐릭터 목록 저장 (복사본 생성)
                 charactersToMove = new List<PlayerCharacter>(startTile.InTilePlayerCharacters);
                 
+                // 목표 타일에 이미 캐릭터가 있는지 확인 (스왑용)
+                List<PlayerCharacter> targetTileCharacters = new List<PlayerCharacter>(currentTargetTile.InTilePlayerCharacters);
+                bool shouldSwap = targetTileCharacters.Count > 0;
+                
                 // 이동 시작 전에 아웃라인이 있는 캐릭터들 추적 (3마리였던 경우)
                 if (startTile.InTilePlayerCharacters.Count == 3)
                 {
                     foreach (var character in charactersToMove)
+                    {
+                        if (character != null)
+                        {
+                            movingCharactersWithOutline.Add(character);
+                        }
+                    }
+                }
+                
+                // 목표 타일의 캐릭터들도 아웃라인 추적 (3마리였던 경우)
+                if (shouldSwap && targetTileCharacters.Count == 3)
+                {
+                    foreach (var character in targetTileCharacters)
                     {
                         if (character != null)
                         {
@@ -390,7 +406,19 @@ public class PlayerController : MonoBehaviour
                     }
                 }
                 
-                // 2. 목표 타일에 캐릭터 추가 (즉시) - 이동 전에 타일 리스트 갱신
+                // 2. 목표 타일에서 캐릭터 제거 (스왑용, 즉시)
+                if (shouldSwap)
+                {
+                    foreach (var character in targetTileCharacters)
+                    {
+                        if (character != null)
+                        {
+                            currentTargetTile.RemoveInTilePlayerCharacter(character);
+                        }
+                    }
+                }
+                
+                // 3. 목표 타일에 시작 타일의 캐릭터 추가 (즉시)
                 pendingTargetTile = currentTargetTile; // 추적용으로 저장
                 
                 for (int i = 0; i < charactersToMove.Count; i++)
@@ -406,17 +434,47 @@ public class PlayerController : MonoBehaviour
                     }
                 }
                 
-                // 3. 각 캐릭터의 목표 위치 계산 및 이동 시작
+                // 4. 시작 타일에 목표 타일의 캐릭터 추가 (스왑용, 즉시)
+                if (shouldSwap)
+                {
+                    for (int i = 0; i < targetTileCharacters.Count; i++)
+                    {
+                        PlayerCharacter character = targetTileCharacters[i];
+                        if (character != null)
+                        {
+                            // 타일 리스트에 추가 (위치 갱신은 하지 않음)
+                            if (!startTile.InTilePlayerCharacters.Contains(character))
+                            {
+                                startTile.InTilePlayerCharacters.Add(character);
+                            }
+                            
+                            // 시작 타일로 이동하는 캐릭터의 콜백 등록
+                            character.OnMoveCompleted = OnCharacterMoveCompleted;
+                            
+                            // 스왑된 캐릭터들도 이동 완료 추적에 추가
+                            if (!charactersToMove.Contains(character))
+                            {
+                                charactersToMove.Add(character);
+                            }
+                        }
+                    }
+                }
+                
+                // 5. 각 캐릭터의 목표 위치 계산 및 이동 시작 (시작 타일 -> 목표 타일)
                 for (int i = 0; i < charactersToMove.Count; i++)
                 {
                     PlayerCharacter character = charactersToMove[i];
                     if (character != null)
                     {
-                        // 목표 타일에서 캐릭터의 인덱스 찾기
-                        int characterIndexInTarget = currentTargetTile.InTilePlayerCharacters.IndexOf(character);
+                        // 캐릭터가 목표 타일에 속하는지 확인
+                        bool isMovingToTarget = currentTargetTile.InTilePlayerCharacters.Contains(character);
+                        Tile targetTile = isMovingToTarget ? currentTargetTile : startTile;
                         
-                        // 캐릭터별 목표 위치 계산
-                        Vector3 targetPosition = currentTargetTile.GetTargetPositionForCharacter(characterIndexInTarget);
+                        // 목표 타일에서 캐릭터의 인덱스 찾기
+                        int characterIndex = targetTile.InTilePlayerCharacters.IndexOf(character);
+                        
+                        // 현재 리스트의 실제 카운트를 사용하여 위치 계산
+                        Vector3 targetPosition = CalculateCharacterPosition(targetTile, characterIndex);
                         targetPosition.z = character.transform.position.z;
                         
                         // 캐릭터 이동 시작
@@ -424,8 +482,14 @@ public class PlayerController : MonoBehaviour
                     }
                 }
                 
-                // 4. 목표 타일의 아웃라인 업데이트 (캐릭터 수가 변경되었으므로)
+                // 7. 목표 타일의 아웃라인 업데이트 (캐릭터 수가 변경되었으므로)
                 currentTargetTile.UpdateCharacterOutlines();
+                
+                // 8. 시작 타일의 아웃라인 업데이트 (스왑된 경우)
+                if (shouldSwap)
+                {
+                    startTile.UpdateCharacterOutlines();
+                }
             }
         }
         
@@ -445,6 +509,41 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
+    /// 캐릭터의 목표 위치를 계산 (타일의 실제 리스트 카운트 사용)
+    /// </summary>
+    private Vector3 CalculateCharacterPosition(Tile tile, int characterIndex)
+    {
+        Vector3 tileCenter = tile.transform.position;
+        float xOffset = 0.1f;
+        float yOffset = 0.1f;
+        
+        // 현재 타일의 실제 캐릭터 수 사용
+        int totalCount = tile.InTilePlayerCharacters.Count;
+        
+        switch(totalCount)
+        {
+            case 1:
+                return tileCenter;
+            case 2:
+                // 첫 번째 캐릭터는 왼쪽, 두 번째는 오른쪽
+                if (characterIndex == 0)
+                    return tileCenter + new Vector3(-xOffset, 0, 0);
+                else
+                    return tileCenter + new Vector3(xOffset, 0, 0);
+            case 3:
+                // 첫 번째: 왼쪽 아래, 두 번째: 오른쪽 아래, 세 번째: 위
+                if (characterIndex == 0)
+                    return tileCenter + new Vector3(-xOffset, -yOffset, 0);
+                else if (characterIndex == 1)
+                    return tileCenter + new Vector3(xOffset, -yOffset, 0);
+                else
+                    return tileCenter + new Vector3(0, yOffset, 0);
+            default:
+                return tileCenter;
+        }
+    }
+
+   /// <summary>
     /// 캐릭터 이동 완료 시 호출되는 콜백
     /// </summary>
     private void OnCharacterMoveCompleted(PlayerCharacter character)
@@ -463,6 +562,12 @@ public class PlayerController : MonoBehaviour
             if (pendingTargetTile != null)
             {
                 pendingTargetTile.RefreshPositionToPlayerCharacters();
+            }
+            
+            // 시작 타일도 갱신 (스왑된 경우)
+            if (startTile != null)
+            {
+                startTile.RefreshPositionToPlayerCharacters();
             }
             
             // 이동 완료된 캐릭터들을 추적 리스트에서 제거

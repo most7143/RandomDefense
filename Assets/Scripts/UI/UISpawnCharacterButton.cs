@@ -117,7 +117,9 @@ public class UIBottomHUD : MonoBehaviour
             {
                 // 캐릭터 이름 설정
                 playerCharacter.Name = characterName;
-                
+
+                 Debug.Log("캐릭터 생성: " + characterName);
+
                 // PlayerCharacterGroup처럼 타일 찾기 및 연결
                 Tile nextSpawnTile = IngameManager.Instance.TileGroupController.GetNextSpawnTile(playerCharacter);
                 if (nextSpawnTile != null)
