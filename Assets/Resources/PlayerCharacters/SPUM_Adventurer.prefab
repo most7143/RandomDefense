@@ -4952,6 +4952,7 @@ MonoBehaviour:
   MoveSpeed: 5
   ReachedDistance: 0.1
   Model: {fileID: 4875316719748868056}
+  PV: {fileID: 0}
   ChangeMaterials:
   - {fileID: 2532488849006070064}
   - {fileID: 929482420638919754}

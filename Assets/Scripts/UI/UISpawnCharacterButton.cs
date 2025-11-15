@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using Photon.Pun;
 using System.Linq;
 
+
 public class UIBottomHUD : MonoBehaviour
 {
     [Header("UI References")]
@@ -98,14 +99,14 @@ public class UIBottomHUD : MonoBehaviour
         }
         
         // 스폰 위치 계산 (일단 임시 위치)
-        Vector3 spawnPosition = Vector3.zero;
+        Vector3 initialSpawnPosition = Vector3.zero;
         Quaternion spawnRotation = Quaternion.identity;
         
         // 포톤 네트워크를 통해 캐릭터 생성
         // Resources 폴더 기준 상대 경로를 전달해야 함
         GameObject characterInstance = PhotonNetwork.Instantiate(
             prefabPath, // 전체 경로 전달 (Resources 폴더 기준)
-            spawnPosition,
+            initialSpawnPosition,
             spawnRotation
         );
         
@@ -113,12 +114,14 @@ public class UIBottomHUD : MonoBehaviour
         {
             // PlayerCharacter 컴포넌트 확인
             PlayerCharacter playerCharacter = characterInstance.GetComponent<PlayerCharacter>();
+            PhotonView characterPV = characterInstance.GetComponent<PhotonView>();
+            
             if (playerCharacter != null)
             {
                 // 캐릭터 이름 설정
                 playerCharacter.Name = characterName;
 
-                 Debug.Log("캐릭터 생성: " + characterName);
+                Debug.Log("캐릭터 생성: " + characterName);
 
                 // PlayerCharacterGroup처럼 타일 찾기 및 연결
                 Tile nextSpawnTile = IngameManager.Instance.TileGroupController.GetNextSpawnTile(playerCharacter);
@@ -126,6 +129,21 @@ public class UIBottomHUD : MonoBehaviour
                 {
                     // 타일에 캐릭터 배치
                     nextSpawnTile.SetInTilePlayerCharacters(playerCharacter);
+                    
+                    // 소환 위치 계산
+                    int characterIndex = nextSpawnTile.InTilePlayerCharacters.IndexOf(playerCharacter);
+                    Vector3 spawnPosition = nextSpawnTile.GetTargetPositionForCharacter(characterIndex);
+                    
+                    // 네트워크 동기화: 모든 클라이언트에 소환 위치 전달
+                    if (characterPV != null)
+                    {
+                        characterPV.RPC("SetSpawnPosition", RpcTarget.All, spawnPosition);
+                    }
+                    else
+                    {
+                        // PhotonView가 없는 경우 로컬에서만 설정
+                        playerCharacter.transform.position = spawnPosition;
+                    }
                 }
                 else
                 {

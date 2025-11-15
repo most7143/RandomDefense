@@ -1,6 +1,7 @@
 using UnityEngine;
+using Photon.Pun;
 
-public class PlayerCharacter : MonoBehaviour
+public class PlayerCharacter : MonoBehaviourPunCallbacks
 {
     [Header("Character Stats")]
     public CharacterNames Name;
@@ -17,6 +18,7 @@ public class PlayerCharacter : MonoBehaviour
 
     [Header("References")]
     public SPUM_Prefabs Model;
+    public PhotonView PV;
 
     private Vector3 targetPosition;
     private bool isMoving = false;
@@ -28,6 +30,15 @@ public class PlayerCharacter : MonoBehaviour
 
 
     public Renderer[] ChangeMaterials;
+
+    void Awake()
+    {
+        // PhotonView 초기화
+        if (PV == null)
+        {
+            PV = GetComponent<PhotonView>();
+        }
+    }
 
     void Start()
     {
@@ -46,9 +57,27 @@ public class PlayerCharacter : MonoBehaviour
     }
 
     /// <summary>
-    /// 목표 지점까지 이동
+    /// 목표 지점까지 이동 (네트워크 동기화)
     /// </summary>
     public void MoveTo(Vector3 target)
+    {
+        // PhotonView가 있고 내가 소유자인 경우에만 RPC 호출
+        if (PV != null && PV.IsMine)
+        {
+            // 모든 클라이언트에 이동 명령 동기화
+            PV.RPC("SyncMoveTo", RpcTarget.All, target);
+        }
+        else if (PV == null)
+        {
+            // PhotonView가 없는 경우 로컬에서만 실행 (오프라인 모드)
+            MoveToLocal(target, false);
+        }
+    }
+
+    /// <summary>
+    /// 이동 실행 (로컬)
+    /// </summary>
+    private void MoveToLocal(Vector3 target, bool syncAnimation = true)
     {
         targetPosition = target;
         // 2D 게임이므로 Z 좌표는 유지 (깊이 유지)
@@ -61,13 +90,36 @@ public class PlayerCharacter : MonoBehaviour
             // 애니메이션이 1개만 있으면 항상 인덱스 0 사용
             currentMoveAnimationIndex = 0;
             Debug.Log("이동 애니메이션 인덱스: " + currentMoveAnimationIndex);
-            Model.PlayAnimation(PlayerState.MOVE, currentMoveAnimationIndex);
+            
+            if (syncAnimation && PV != null && PV.IsMine)
+            {
+                // 네트워크 동기화가 필요한 경우
+                PlayMoveAnimation(currentMoveAnimationIndex);
+            }
+            else
+            {
+                // 직접 재생 (RPC에서 호출된 경우 또는 PhotonView가 없는 경우)
+                if (Model != null)
+                {
+                    Model.PlayAnimation(PlayerState.MOVE, currentMoveAnimationIndex);
+                }
+            }
         }
         
         // 이동 방향 설정
         UpdateAnimationDirection();
         
         Debug.Log($"[PlayerCharacter] 이동 시작: {transform.position} -> {targetPosition}");
+    }
+
+    /// <summary>
+    /// 이동 동기화 RPC
+    /// </summary>
+    [PunRPC]
+    private void SyncMoveTo(Vector3 target)
+    {
+        // RPC에서 호출되므로 애니메이션은 직접 재생 (syncAnimation = false)
+        MoveToLocal(target, false);
     }
     /// <summary>
     /// 이동 처리
@@ -119,17 +171,40 @@ public class PlayerCharacter : MonoBehaviour
         isMoving = false;
         transform.position = targetPosition; // 정확한 위치로 설정
         
-        // 대기 애니메이션 재생
+        // 대기 애니메이션 재생 (네트워크 동기화)
         if (Model != null && Model.IDLE_List != null && Model.IDLE_List.Count > 0)
         {
             int idleIndex = Random.Range(0, Model.IDLE_List.Count);
-            Model.PlayAnimation(PlayerState.IDLE, idleIndex);
+            PlayIdleAnimation(idleIndex);
         }
         
         Debug.Log($"[PlayerCharacter] 이동 완료: {transform.position}");
         
-        // 이동 완료 콜백 호출
-        OnMoveCompleted?.Invoke(this);
+        // 이동 완료 콜백 호출 (소유자만)
+        if (PV == null || PV.IsMine)
+        {
+            OnMoveCompleted?.Invoke(this);
+        }
+    }
+
+    /// <summary>
+    /// 대기 애니메이션 재생 (네트워크 동기화)
+    /// </summary>
+    private void PlayIdleAnimation(int idleIndex)
+    {
+        if (PV != null && PV.IsMine)
+        {
+            // 모든 클라이언트에 애니메이션 동기화
+            PV.RPC("SyncPlayAnimation", RpcTarget.All, (int)PlayerState.IDLE, idleIndex);
+        }
+        else
+        {
+            // PhotonView가 없거나 소유자가 아닌 경우 직접 재생
+            if (Model != null)
+            {
+                Model.PlayAnimation(PlayerState.IDLE, idleIndex);
+            }
+        }
     }
 
   /// <summary>
@@ -164,9 +239,18 @@ public class PlayerCharacter : MonoBehaviour
             
             // 8방향으로 나누기 (각 45도)
             int directionIndex = Mathf.RoundToInt(angle / 45f) % 8;
-            currentMoveAnimationIndex = Mathf.Clamp(directionIndex, 0, Model.MOVE_List.Count - 1);
+            int newAnimationIndex = Mathf.Clamp(directionIndex, 0, Model.MOVE_List.Count - 1);
             
-            Model.PlayAnimation(PlayerState.MOVE, currentMoveAnimationIndex);
+            // 방향이 변경된 경우에만 애니메이션 업데이트
+            if (currentMoveAnimationIndex != newAnimationIndex)
+            {
+                currentMoveAnimationIndex = newAnimationIndex;
+                // 이동 중 방향 변경은 각 클라이언트에서 독립적으로 처리
+                if (Model != null)
+                {
+                    Model.PlayAnimation(PlayerState.MOVE, currentMoveAnimationIndex);
+                }
+            }
         }
         else if (Model.MOVE_List.Count >= 4)
         {
@@ -182,13 +266,55 @@ public class PlayerCharacter : MonoBehaviour
                 // 상하
                 directionIndex = direction.y > 0 ? 1 : 3; // 위: 1, 아래: 3
             }
-            currentMoveAnimationIndex = Mathf.Clamp(directionIndex, 0, Model.MOVE_List.Count - 1);
-            Model.PlayAnimation(PlayerState.MOVE, currentMoveAnimationIndex);
+            int newAnimationIndex = Mathf.Clamp(directionIndex, 0, Model.MOVE_List.Count - 1);
+            
+            // 방향이 변경된 경우에만 애니메이션 업데이트
+            if (currentMoveAnimationIndex != newAnimationIndex)
+            {
+                currentMoveAnimationIndex = newAnimationIndex;
+                // 이동 중 방향 변경은 각 클라이언트에서 독립적으로 처리
+                if (Model != null)
+                {
+                    Model.PlayAnimation(PlayerState.MOVE, currentMoveAnimationIndex);
+                }
+            }
         }
         else
         {
             // 애니메이션이 2-3개만 있을 때는 인덱스 0 사용
             currentMoveAnimationIndex = 0;
+        }
+    }
+
+    /// <summary>
+    /// 이동 애니메이션 재생 (네트워크 동기화)
+    /// </summary>
+    private void PlayMoveAnimation(int animationIndex)
+    {
+        if (PV != null && PV.IsMine)
+        {
+            // 모든 클라이언트에 애니메이션 동기화
+            PV.RPC("SyncPlayAnimation", RpcTarget.All, (int)PlayerState.MOVE, animationIndex);
+        }
+        else
+        {
+            // PhotonView가 없거나 소유자가 아닌 경우 직접 재생
+            if (Model != null)
+            {
+                Model.PlayAnimation(PlayerState.MOVE, animationIndex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 애니메이션 동기화 RPC
+    /// </summary>
+    [PunRPC]
+    private void SyncPlayAnimation(int state, int animationIndex)
+    {
+        if (Model != null)
+        {
+            Model.PlayAnimation((PlayerState)state, animationIndex);
         }
     }
 
@@ -211,15 +337,35 @@ public class PlayerCharacter : MonoBehaviour
     }
 
     /// <summary>
-    /// 공격
+    /// 공격 (네트워크 동기화)
     /// </summary>
     public void Attack()
     {
         if (Model != null && Model.ATTACK_List != null && Model.ATTACK_List.Count > 0)
         {
             int attackIndex = Random.Range(0, Model.ATTACK_List.Count);
-            Model.PlayAnimation(PlayerState.ATTACK, attackIndex);
+            
+            if (PV != null && PV.IsMine)
+            {
+                // 모든 클라이언트에 애니메이션 동기화
+                PV.RPC("SyncPlayAnimation", RpcTarget.All, (int)PlayerState.ATTACK, attackIndex);
+            }
+            else if (PV == null)
+            {
+                // PhotonView가 없는 경우 로컬에서만 실행
+                Model.PlayAnimation(PlayerState.ATTACK, attackIndex);
+            }
         }
+    }
+
+    /// <summary>
+    /// 소환 위치 설정 (네트워크 동기화)
+    /// </summary>
+    [PunRPC]
+    public void SetSpawnPosition(Vector3 position)
+    {
+        transform.position = position;
+        Debug.Log($"[PlayerCharacter] 소환 위치 설정: {position}");
     }
 
     /// <summary>
