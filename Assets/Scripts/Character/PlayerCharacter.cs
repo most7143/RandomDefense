@@ -17,6 +17,8 @@ public class PlayerCharacter : MonoBehaviourPunCallbacks
     public float ReachedDistance = 0.1f;
 
     [Header("References")]
+
+    public CharacterAttackSystem AttackSystem;
     public SPUM_Prefabs Model;
     public PhotonView PV;
 

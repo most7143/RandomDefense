@@ -1,7 +1,7 @@
 using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
-
+using UnityEngine.UI;
 public class Monster : MonoBehaviourPunCallbacks
 {
     public MonsterNames Name;
@@ -10,10 +10,15 @@ public class Monster : MonoBehaviourPunCallbacks
 
     public int Level;
     public float HP;
+    public float MaxHP; // 최대 체력 저장
     public float MoveSpeed = 2f;
 
     public SpriteRenderer SpriteRenderer;
     public PhotonView PV;
+
+    public GameObject HPBar;
+
+    public Image HPBarImage;
     private int currentTargetIndex = 0;
     private const float reachedDistance = 0.1f;
     
@@ -40,6 +45,18 @@ public class Monster : MonoBehaviourPunCallbacks
 
     void Start()
     {
+       // 최대 체력 저장 (초기 체력을 최대 체력으로 설정)
+        if (MaxHP <= 0)
+        {
+            MaxHP = HP;
+        }
+
+        // HPBar 초기에는 비활성화
+        if (HPBar != null)
+        {
+            HPBar.SetActive(false);
+        }
+
         // OnPhotonInstantiate가 호출되지 않은 경우를 대비한 백업
         if (!positionAdjusted && PV != null && !PV.IsMine && IngameManager.Instance != null)
         {
@@ -138,14 +155,82 @@ public class Monster : MonoBehaviourPunCallbacks
         }
     }
 
+    /// <summary>
+    /// 데미지를 받는 RPC 메서드
+    /// </summary>
     [PunRPC]
-    public void SetMovePoints(Vector3[] positions)
+    public void TakeDamage(float damage)
     {
-        movePointPositions = positions;
-        if (positions != null && positions.Length > 0)
+        float previousHP = HP;
+        HP -= damage;
+        
+        // 체력이 감소했고, 이전 체력이 최대 체력이었다면 HPBar 표시
+        if (previousHP >= MaxHP && HP < MaxHP && HPBar != null)
         {
-            transform.position = positions[0];
-            currentTargetIndex = 1 % positions.Length;
+            HPBar.SetActive(true);
+        }
+        
+        // HPBar의 FillAmount 갱신
+        UpdateHPBar();
+        
+        // 체력이 0 이하가 되면 몬스터 제거
+        if (HP <= 0)
+        {
+            HP = 0;
+            
+            // 스포너의 카운터 감소 및 갱신
+            DecreaseSpawnerCount();
+            
+            // 몬스터 파괴 (네트워크 동기화)
+            if (PV != null && PV.IsMine)
+            {
+                PhotonNetwork.Destroy(gameObject);
+            }
+            else if (PV == null)
+            {
+                // PhotonView가 없는 경우 로컬에서만 파괴
+                Destroy(gameObject);
+            }
+        }
+    }
+
+    /// <summary>
+    /// HPBar의 FillAmount를 현재 체력에 비례하여 갱신
+    /// </summary>
+    private void UpdateHPBar()
+    {
+        if (HPBarImage == null || MaxHP <= 0)
+            return;
+
+        // 현재 체력 / 최대 체력 비율 계산 (0 ~ 1 사이)
+        float fillAmount = Mathf.Clamp01(HP / MaxHP);
+        HPBarImage.fillAmount = fillAmount;
+    }
+
+    /// <summary>
+    /// 스포너의 카운터 감소 및 갱신
+    /// </summary>
+    private void DecreaseSpawnerCount()
+    {
+        if (IngameManager.Instance == null)
+            return;
+
+        // SpanwerIndex로 해당 스포너 찾기
+        MonsterSpawner spawner = null;
+        if (SpanwerIndex == 1)
+        {
+            spawner = IngameManager.Instance.TopSpawner;
+        }
+        else if (SpanwerIndex == 2)
+        {
+            spawner = IngameManager.Instance.DownSpawner;
+        }
+
+        // 스포너를 찾았고 카운터가 0보다 크면 감소
+        if (spawner != null && spawner.AliveMonsterCount > 0)
+        {
+            spawner.AliveMonsterCount--;
+            Debug.Log($"[Monster] 스포너 {SpanwerIndex}의 생존 몬스터 수 감소: {spawner.AliveMonsterCount}");
         }
     }
 }

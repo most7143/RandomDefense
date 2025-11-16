@@ -801,6 +801,7 @@ GameObject:
   - component: {fileID: 4968580742226771353}
   - component: {fileID: -3098862759818588335}
   - component: {fileID: -3646294863709961496}
+  - component: {fileID: -18887227588256650}
   m_Layer: 0
   m_Name: SPUM_DemonApprenticeMage
   m_TagString: Untagged
@@ -3815,9 +3816,10 @@ MonoBehaviour:
   Name: 4
   Damage: 1
   AttackSpeed: 1
-  AttackRange: 1
+  AttackRange: 0.5
   MoveSpeed: 5
   ReachedDistance: 0.1
+  AttackSystem: {fileID: 0}
   Model: {fileID: 4968580742226771353}
   PV: {fileID: 0}
   ChangeMaterials:
@@ -3851,6 +3853,21 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &-18887227588256650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1532218796454169711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c0e79ded9689d45b2a035897f89613, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterAttackSystem
+  PlayerCharacter: {fileID: -3098862759818588335}
+  Model: {fileID: 4968580742226771353}
+  PV: {fileID: -3646294863709961496}
 --- !u!1 &1694226004405638191
 GameObject:
   m_ObjectHideFlags: 0

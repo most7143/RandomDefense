@@ -3935,6 +3935,7 @@ GameObject:
   - component: {fileID: 4710366085002530807}
   - component: {fileID: -8569604508882075788}
   - component: {fileID: -2790423239181425374}
+  - component: {fileID: 732230802748485864}
   m_Layer: 5
   m_Name: SPUM_DemonWizard
   m_TagString: Untagged
@@ -6979,9 +6980,10 @@ MonoBehaviour:
   Name: 6
   Damage: 1
   AttackSpeed: 1
-  AttackRange: 1
+  AttackRange: 0.5
   MoveSpeed: 5
   ReachedDistance: 0.1
+  AttackSystem: {fileID: 0}
   Model: {fileID: 4710366085002530807}
   PV: {fileID: 0}
   ChangeMaterials:
@@ -7018,6 +7020,21 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &732230802748485864
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7703195771484518730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c0e79ded9689d45b2a035897f89613, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterAttackSystem
+  PlayerCharacter: {fileID: -8569604508882075788}
+  Model: {fileID: 4710366085002530807}
+  PV: {fileID: -2790423239181425374}
 --- !u!1 &7860285634980709751
 GameObject:
   m_ObjectHideFlags: 0

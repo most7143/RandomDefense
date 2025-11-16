@@ -945,6 +945,7 @@ GameObject:
   - component: {fileID: 2320330871762159313}
   - component: {fileID: 8092099716369485071}
   - component: {fileID: 4555376620278419461}
+  - component: {fileID: -6726147682270258515}
   m_Layer: 5
   m_Name: SPUM_ElfApprenticeArcher
   m_TagString: Untagged
@@ -3979,9 +3980,10 @@ MonoBehaviour:
   Name: 1
   Damage: 1
   AttackSpeed: 1
-  AttackRange: 1
+  AttackRange: 0.5
   MoveSpeed: 5
   ReachedDistance: 0.1
+  AttackSystem: {fileID: 0}
   Model: {fileID: 2320330871762159313}
   PV: {fileID: 0}
   ChangeMaterials:
@@ -4018,6 +4020,21 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &-6726147682270258515
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1209665655002790913}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c0e79ded9689d45b2a035897f89613, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterAttackSystem
+  PlayerCharacter: {fileID: 8092099716369485071}
+  Model: {fileID: 2320330871762159313}
+  PV: {fileID: 4555376620278419461}
 --- !u!1 &1253027004482661863
 GameObject:
   m_ObjectHideFlags: 0

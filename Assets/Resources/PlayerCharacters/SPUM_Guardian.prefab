@@ -4843,6 +4843,7 @@ GameObject:
   - component: {fileID: 5838017054900553155}
   - component: {fileID: -1045571037397919512}
   - component: {fileID: -6948028463053889231}
+  - component: {fileID: -4908359018693387227}
   m_Layer: 5
   m_Name: SPUM_Guardian
   m_TagString: Untagged
@@ -7897,9 +7898,10 @@ MonoBehaviour:
   Name: 0
   Damage: 1
   AttackSpeed: 1
-  AttackRange: 1
+  AttackRange: 0.5
   MoveSpeed: 5
   ReachedDistance: 0.1
+  AttackSystem: {fileID: 0}
   Model: {fileID: 5838017054900553155}
   PV: {fileID: 0}
   ChangeMaterials:
@@ -7937,6 +7939,21 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &-4908359018693387227
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8738902458370966635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c0e79ded9689d45b2a035897f89613, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterAttackSystem
+  PlayerCharacter: {fileID: -1045571037397919512}
+  Model: {fileID: 5838017054900553155}
+  PV: {fileID: -6948028463053889231}
 --- !u!1 &8930365631019049075
 GameObject:
   m_ObjectHideFlags: 0

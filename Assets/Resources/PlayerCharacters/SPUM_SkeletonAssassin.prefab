@@ -2800,6 +2800,7 @@ GameObject:
   - component: {fileID: 4479428206937493634}
   - component: {fileID: -6403071183822062256}
   - component: {fileID: -2695339452365813540}
+  - component: {fileID: 4982160389883349449}
   m_Layer: 5
   m_Name: SPUM_SkeletonAssassin
   m_TagString: Untagged
@@ -5794,9 +5795,10 @@ MonoBehaviour:
   Name: 8
   Damage: 1
   AttackSpeed: 1
-  AttackRange: 1
+  AttackRange: 0.5
   MoveSpeed: 5
   ReachedDistance: 0.1
+  AttackSystem: {fileID: 0}
   Model: {fileID: 4479428206937493634}
   PV: {fileID: 0}
   ChangeMaterials:
@@ -5833,6 +5835,21 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &4982160389883349449
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4847838609770726236}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c0e79ded9689d45b2a035897f89613, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterAttackSystem
+  PlayerCharacter: {fileID: -6403071183822062256}
+  Model: {fileID: 4479428206937493634}
+  PV: {fileID: -2695339452365813540}
 --- !u!1 &4983291757369025525
 GameObject:
   m_ObjectHideFlags: 0

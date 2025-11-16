@@ -9,6 +9,8 @@ public class TileGroupController : MonoBehaviour
 
     public GameObject TargetHighlightObject;
 
+    public GameObject AttackRangeHighlightObject;
+
 
 
    public void ShowTargetTile(Vector3 position)
@@ -21,6 +23,40 @@ public class TileGroupController : MonoBehaviour
    {
     TargetHighlightObject.SetActive(false);
    }
+
+    /// <summary>
+    /// 공격 범위 하이라이트 표시 (타일 중심 위치에)
+    /// </summary>
+    public void ShowAttackRangeHighlight(Vector3 position, float attackRange)
+    {
+        if (AttackRangeHighlightObject != null)
+        {
+            AttackRangeHighlightObject.transform.position = position;
+            
+            // 공격 범위에 맞게 크기 조정 (AttackRangeHighlightObject가 SpriteRenderer를 가지고 있다고 가정)
+            SpriteRenderer spriteRenderer = AttackRangeHighlightObject.GetComponent<SpriteRenderer>();
+            if (spriteRenderer != null && spriteRenderer.sprite != null)
+            {
+                // 스프라이트의 기본 크기 기준으로 공격 범위에 맞게 스케일 조정
+                // 원형 범위라면 반지름 * 2가 전체 크기가 되어야 함
+                float scale = (attackRange * 2f) / spriteRenderer.sprite.bounds.size.x;
+                AttackRangeHighlightObject.transform.localScale = Vector3.one * scale;
+            }
+            
+            AttackRangeHighlightObject.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// 공격 범위 하이라이트 숨김
+    /// </summary>
+    public void HideAttackRangeHighlight()
+    {
+        if (AttackRangeHighlightObject != null)
+        {
+            AttackRangeHighlightObject.SetActive(false);
+        }
+    }
 
   public Tile GetNextSpawnTile(PlayerCharacter character)
    {

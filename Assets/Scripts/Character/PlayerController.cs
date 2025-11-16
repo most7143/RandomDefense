@@ -29,6 +29,8 @@ public class PlayerController : MonoBehaviour
     private Vector3 startWorldPosition; // 드래그 시작 월드 좌표
     private bool isDragging = false;
     private bool hasSelectedCharacter = false;
+    private bool isTileSelected = false; // 타일 선택 상태
+    private Tile selectedTile = null; // 선택된 타일
     private Tile currentTargetTile = null; // 현재 타겟 타일
     private Tile startTile = null; // 이동 시작 타일
     private Tile pendingTargetTile = null; // 이동 완료 후 추가할 타일 (이동 중 타일 리스트 갱신 방지용)
@@ -118,32 +120,28 @@ public class PlayerController : MonoBehaviour
         // 타일을 클릭했고, 그 타일 안에 캐릭터가 있는 경우
         if (clickedTile != null && clickedTile.InTilePlayerCharacters != null && clickedTile.InTilePlayerCharacters.Count > 0)
         {
-            // 타일 안의 첫 번째 캐릭터를 선택 (표시용)
-            PlayerCharacter character = clickedTile.InTilePlayerCharacters[0];
-            if (character != null)
+            // 같은 타일을 다시 클릭한 경우 선택 해제
+            if (isTileSelected && selectedTile == clickedTile)
             {
-                SelectCharcter(character);
-                startDragPosition = Input.mousePosition;
-                startWorldPosition = character.transform.position;
-                startTile = clickedTile; // 시작 타일 저장
-                hasSelectedCharacter = true;
-                isDragging = false;
-                pendingTargetTile = null;
-                charactersToMove.Clear();
-                
-                // 모든 캐릭터에 이동 완료 콜백 등록
-                foreach (var charInTile in clickedTile.InTilePlayerCharacters)
-                {
-                    if (charInTile != null)
-                    {
-                        charInTile.OnMoveCompleted = OnCharacterMoveCompleted;
-                    }
-                }
+                DeselectTile();
                 return;
             }
+            
+            // 이전 선택 해제
+            DeselectTile();
+            
+            // 새로운 타일 선택
+            SelectTile(clickedTile);
+            
+            // 드래그 시작 위치 저장 (드래그 시작 감지용)
+            startDragPosition = Input.mousePosition;
+            startTile = clickedTile; // 시작 타일 저장
+            
+            return;
         }
 
        // 타일을 클릭하지 않았거나 타일 안에 캐릭터가 없으면 선택 해제
+       DeselectTile();
        startTile = null;
        pendingTargetTile = null;
        charactersToMove.Clear();
@@ -154,14 +152,58 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     private void OnMouseDrag()
     {
-        if (SelectedCharcter == null)
+        // 타일이 선택된 상태에서 드래그가 시작되면 선택 해제하고 드래그 상태로 전환
+        if (isTileSelected && selectedTile != null)
+        {
+            currentDragPosition = Input.mousePosition;
+            float dragDistance = Vector3.Distance(startDragPosition, currentDragPosition);
+            
+            if (dragDistance > 10f) // 10픽셀 이상 드래그하면 드래그 시작
+            {
+                // 타일 선택 상태 해제하고 드래그 상태로 전환
+                Tile tileToMove = selectedTile;
+                PlayerCharacter character = tileToMove.InTilePlayerCharacters[0];
+                
+                if (character != null)
+                {
+                    DeselectTile();
+                    
+                    SelectCharcter(character);
+                    startWorldPosition = character.transform.position;
+                    startTile = tileToMove;
+                    hasSelectedCharacter = true;
+                    isDragging = true;
+                    pendingTargetTile = null;
+                    charactersToMove.Clear();
+                    
+                    // 모든 캐릭터에 이동 완료 콜백 등록
+                    foreach (var charInTile in tileToMove.InTilePlayerCharacters)
+                    {
+                        if (charInTile != null)
+                        {
+                            charInTile.OnMoveCompleted = OnCharacterMoveCompleted;
+                        }
+                    }
+                    
+                    // 드래그 시작 시 모든 타일 표시
+                    ShowAllTiles();
+                }
+            }
+            else
+            {
+                // 드래그 거리가 부족하면 아무것도 하지 않음 (타일 선택 상태 유지)
+                return;
+            }
+        }
+        
+        if (SelectedCharcter == null || !hasSelectedCharacter)
             return;
 
         currentDragPosition = Input.mousePosition;
         
         // 드래그 거리가 일정 이상이면 드래그 시작
-        float dragDistance = Vector3.Distance(startDragPosition, currentDragPosition);
-        if (dragDistance > 10f) // 10픽셀 이상 드래그하면 이동 시작
+        float dragDistance2 = Vector3.Distance(startDragPosition, currentDragPosition);
+        if (dragDistance2 > 10f) // 10픽셀 이상 드래그하면 이동 시작
         {
             if (!isDragging)
             {
@@ -360,6 +402,9 @@ public class PlayerController : MonoBehaviour
                 
                 // 드래그 라인 숨김
                 HideDragLine();
+                
+                // 타일 선택 해제
+                DeselectTile();
                 return;
             }
             
@@ -511,6 +556,9 @@ public class PlayerController : MonoBehaviour
         
         // 드래그 라인 숨김
         HideDragLine();
+        
+        // 타일 선택 해제
+        DeselectTile();
     }
 
     /// <summary>
@@ -583,6 +631,53 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
+    /// 타일 선택
+    /// </summary>
+    private void SelectTile(Tile tile)
+    {
+        if (tile == null || tile.InTilePlayerCharacters == null || tile.InTilePlayerCharacters.Count == 0)
+            return;
+        
+        // 이전 선택 해제
+        DeselectTile();
+        
+        selectedTile = tile;
+        isTileSelected = true;
+        
+        // 타일 안의 첫 번째 캐릭터를 선택 (표시용)
+        PlayerCharacter character = tile.InTilePlayerCharacters[0];
+        if (character != null)
+        {
+            SelectCharcter(character);
+            
+            // 공격 범위 하이라이트 표시
+            if (TileGroupController != null)
+            {
+                float attackRange = character.AttackRange;
+                TileGroupController.ShowAttackRangeHighlight(tile.transform.position, attackRange);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 타일 선택 해제
+    /// </summary>
+    private void DeselectTile()
+    {
+        if (isTileSelected)
+        {
+            // 공격 범위 하이라이트 숨김
+            if (TileGroupController != null)
+            {
+                TileGroupController.HideAttackRangeHighlight();
+            }
+            
+            isTileSelected = false;
+            selectedTile = null;
+        }
+    }
+
+    /// <summary>
     /// 캐릭터 선택 해제
     /// </summary>
     private void DeselectCharacter()
@@ -612,6 +707,9 @@ public class PlayerController : MonoBehaviour
         
         // 드래그 라인 숨김
         HideDragLine();
+        
+        // 타일 선택 해제
+        DeselectTile();
     }
 
     /// <summary>

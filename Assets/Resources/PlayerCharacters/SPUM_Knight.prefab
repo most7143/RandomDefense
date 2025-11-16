@@ -1348,6 +1348,7 @@ GameObject:
   - component: {fileID: 3611804698667321785}
   - component: {fileID: -6960937129557153536}
   - component: {fileID: -8087596036558405505}
+  - component: {fileID: -6572803270425743411}
   m_Layer: 5
   m_Name: SPUM_Knight
   m_TagString: Untagged
@@ -4392,9 +4393,10 @@ MonoBehaviour:
   Name: 11
   Damage: 1
   AttackSpeed: 1
-  AttackRange: 1
+  AttackRange: 0.5
   MoveSpeed: 5
   ReachedDistance: 0.1
+  AttackSystem: {fileID: 0}
   Model: {fileID: 3611804698667321785}
   PV: {fileID: 0}
   ChangeMaterials:
@@ -4431,6 +4433,21 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &-6572803270425743411
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3222167648754355912}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c0e79ded9689d45b2a035897f89613, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterAttackSystem
+  PlayerCharacter: {fileID: -6960937129557153536}
+  Model: {fileID: 3611804698667321785}
+  PV: {fileID: -8087596036558405505}
 --- !u!1 &3282349675828596777
 GameObject:
   m_ObjectHideFlags: 0
