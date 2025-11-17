@@ -26,12 +26,36 @@ public class LoadingManager : MonoBehaviourPunCallbacks
             Debug.LogWarning("[LoadingManager] Photon에 연결되어 있지 않습니다.");
             return;
         }
-        
+
         // 초기 로딩 상태 표시
-        UpdateLoadingText("씬 로딩 중...");
+        UpdateLoadingText("캐릭터 프리팹 생성 중...");
+        
+        // 캐릭터 프리팹 생성 및 씬 로딩 대기
+        StartCoroutine(WaitForCharacterGroupInitialization());
+    }
+    
+    /// <summary>
+    /// PlayerCharacterGroup 초기화 완료 대기
+    /// </summary>
+    private IEnumerator WaitForCharacterGroupInitialization()
+    {
+        // PlayerCharacterGroup 싱글톤 확인
+        if (PlayerCharacterGroup.Instance == null)
+        {
+            Debug.LogError("[LoadingManager] PlayerCharacterGroup.Instance를 찾을 수 없습니다!");
+            yield break;
+        }
+
+        // Initialize 코루틴 시작
+        Coroutine initCoroutine = StartCoroutine(PlayerCharacterGroup.Instance.InitializeCoroutine());
+        
+        // Initialize 완료까지 대기
+        yield return initCoroutine;
+        
+        UpdateLoadingText("캐릭터 프리팹 생성 완료. 씬 로딩 중...");
         
         // 씬이 완전히 로드될 때까지 대기
-        StartCoroutine(WaitForSceneLoad());
+        yield return StartCoroutine(WaitForSceneLoad());
     }
     
     /// <summary>

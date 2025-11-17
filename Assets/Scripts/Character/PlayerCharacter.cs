@@ -8,6 +8,9 @@ public class PlayerCharacter : MonoBehaviourPunCallbacks
     public float Damage = 1;
     public int AttackSpeed = 1;
     public float AttackRange = 1;
+    
+    [Tooltip("공격 애니메이션 속도 배율 (1 = 기본 속도, 2 = 2배 빠름)")]
+    public float AttackAnimationSpeed = 1f; // 공격 애니메이션 속도 변수 추가
 
     [Header("Movement Settings")]
     [Tooltip("이동 속도")]

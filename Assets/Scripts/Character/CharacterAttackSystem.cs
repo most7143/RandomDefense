@@ -189,6 +189,13 @@ public class CharacterAttackSystem : MonoBehaviour
         {
             int attackIndex = 0; // 공격 애니메이션 0번 고정
             
+            // 공격 애니메이션 속도 설정
+            Animator animator = Model.GetComponent<Animator>();
+            if (animator != null && PlayerCharacter != null)
+            {
+                animator.speed = PlayerCharacter.AttackAnimationSpeed;
+            }
+            
             if (PV != null && PV.IsMine)
             {
                 // 모든 클라이언트에 애니메이션 동기화
@@ -226,16 +233,16 @@ public class CharacterAttackSystem : MonoBehaviour
         if (PlayerCharacter == null)
             return;
 
-        // 방향에 따라 플립 (오른쪽: 정방향, 왼쪽: 반전)
+        // 방향에 따라 플립 (오른쪽: 반전, 왼쪽: 정방향) - 수정: 반대로 적용
         if (directionX < -0.01f)
         {
-            // 왼쪽 - 반전
-            transform.localScale = new Vector3(-Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
+            // 왼쪽 - 정방향
+            transform.localScale = new Vector3(Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
         }
         else if (directionX > 0.01f)
         {
-            // 오른쪽 - 정방향
-            transform.localScale = new Vector3(Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
+            // 오른쪽 - 반전
+            transform.localScale = new Vector3(-Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
         }
     }
 
@@ -247,6 +254,13 @@ public class CharacterAttackSystem : MonoBehaviour
     {
         if (Model != null)
         {
+            // 공격 애니메이션 속도 설정
+            Animator animator = Model.GetComponent<Animator>();
+            if (animator != null && PlayerCharacter != null)
+            {
+                animator.speed = PlayerCharacter.AttackAnimationSpeed;
+            }
+            
             Model.PlayAnimation(PlayerState.ATTACK, attackIndex);
         }
     }

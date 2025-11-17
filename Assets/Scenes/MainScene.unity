@@ -1021,10 +1021,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 142b9a8ab74ae0f4b9de29dc97a86adc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCharacterGroup
-  Characters:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  PoolSizePerCharacter: 20
 --- !u!4 &344767792
 Transform:
   m_ObjectHideFlags: 0
@@ -1389,6 +1386,14 @@ MonoBehaviour:
   LineRenderer: {fileID: 48067319}
   PlayerMaterial: {fileID: 2100000, guid: c5a65547d1edf4a9d882bd6cff83eda8, type: 2}
   OutlineMaterial: {fileID: 2100000, guid: 83113fd58697d9848ac16239bc0cb641, type: 2}
+  isDragging: 0
+  isTileSelected: 0
+  selectedTile: {fileID: 0}
+  currentTargetTile: {fileID: 0}
+  startTile: {fileID: 0}
+  pendingTargetTile: {fileID: 0}
+  charactersToMove: []
+  clickedTileOnDown: {fileID: 0}
 --- !u!4 &429115134
 Transform:
   m_ObjectHideFlags: 0
@@ -4329,7 +4334,7 @@ MonoBehaviour:
   RoundTimer: 20
   RoundCount: 0
   RoundMaxCount: 10
-  MaxMonsterCount: 30
+  MaxMonsterCount: 40
   TimerText: {fileID: 1705709916}
   RoundText: {fileID: 1341017650}
   MonsterCountText: {fileID: 1331379400}
@@ -11031,7 +11036,7 @@ Transform:
   m_GameObject: {fileID: 1455913983}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.7092099, y: 0.9347, z: 0}
+  m_LocalPosition: {x: -0.7092099, y: -2.91, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

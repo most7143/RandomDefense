@@ -242,6 +242,13 @@ public class Monster : MonoBehaviourPunCallbacks
         {
             spawner.AliveMonsterCount--;
             Debug.Log($"[Monster] 스포너 {SpanwerIndex}의 생존 몬스터 수 감소: {spawner.AliveMonsterCount}");
+            
+            // 내 스포너의 몬스터가 죽었을 때만 UI 갱신
+            if (IngameManager.Instance.IsMyMonster(this) && IngameManager.Instance.DownSpawner != null)
+            {
+                int myMonsterCount = IngameManager.Instance.DownSpawner.AliveMonsterCount;
+                IngameManager.Instance.UpdateMonsterCountUI(myMonsterCount);
+            }
         }
     }
 }

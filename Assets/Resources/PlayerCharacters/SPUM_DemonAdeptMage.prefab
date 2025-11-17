@@ -6375,9 +6375,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCharcter
   Name: 5
-  Damage: 1
+  Damage: 5
   AttackSpeed: 1
   AttackRange: 0.5
+  AttackAnimationSpeed: 2
   MoveSpeed: 5
   ReachedDistance: 0.1
   AttackSystem: {fileID: 0}
@@ -7201,7 +7202,7 @@ Transform:
   m_GameObject: {fileID: 7578708352494159836}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -0.15, z: 0}
   m_LocalScale: {x: 0.5, y: 0.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
