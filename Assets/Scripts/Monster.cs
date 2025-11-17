@@ -155,6 +155,17 @@ public class Monster : MonoBehaviourPunCallbacks
         }
     }
 
+    [PunRPC]
+    public void SetMovePoints(Vector3[] positions)
+    {
+        movePointPositions = positions;
+        if (positions != null && positions.Length > 0)
+        {
+            transform.position = positions[0];
+            currentTargetIndex = 1 % positions.Length;
+        }
+    }
+
     /// <summary>
     /// 데미지를 받는 RPC 메서드
     /// </summary>

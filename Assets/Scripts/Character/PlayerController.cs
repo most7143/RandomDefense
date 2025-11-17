@@ -27,15 +27,15 @@ public class PlayerController : MonoBehaviour
     private Vector3 startDragPosition;
     private Vector3 currentDragPosition;
     private Vector3 startWorldPosition; // 드래그 시작 월드 좌표
-    private bool isDragging = false;
-    private bool hasSelectedCharacter = false;
-    private bool isTileSelected = false; // 타일 선택 상태
-    private Tile selectedTile = null; // 선택된 타일
-    private Tile currentTargetTile = null; // 현재 타겟 타일
-    private Tile startTile = null; // 이동 시작 타일
-    private Tile pendingTargetTile = null; // 이동 완료 후 추가할 타일 (이동 중 타일 리스트 갱신 방지용)
-    private List<PlayerCharacter> charactersToMove = new List<PlayerCharacter>(); // 이동할 캐릭터 목록
-    private HashSet<PlayerCharacter> movingCharactersWithOutline = new HashSet<PlayerCharacter>(); // 아웃라인을 유지해야 하는 이동 중인 캐릭터들
+    [SerializeField]private bool isDragging = false;
+    [SerializeField]private bool isTileSelected = false; // 타일 선택 상태
+    [SerializeField]private Tile selectedTile = null; // 선택된 타일
+    [SerializeField]private Tile currentTargetTile = null; // 현재 타겟 타일
+    [SerializeField]private Tile startTile = null; // 이동 시작 타일
+    [SerializeField]private Tile pendingTargetTile = null; // 이동 완료 후 추가할 타일 (이동 중 타일 리스트 갱신 방지용)
+    [SerializeField]private List<PlayerCharacter> charactersToMove = new List<PlayerCharacter>(); // 이동할 캐릭터 목록
+    [SerializeField]private HashSet<PlayerCharacter> movingCharactersWithOutline = new HashSet<PlayerCharacter>(); // 아웃라인을 유지해야 하는 이동 중인 캐릭터들
+    [SerializeField]private Tile clickedTileOnDown = null; // MouseDown 시 클릭한 타일 (MouseUp에서 선택 확인용)
 
     void Start()
     {
@@ -78,7 +78,7 @@ public class PlayerController : MonoBehaviour
         }
         
         // 마우스를 드래그하는 중
-        if (Input.GetMouseButton(0) && hasSelectedCharacter)
+        if (Input.GetMouseButton(0) && startTile != null)
         {
             OnMouseDrag();
         }
@@ -91,7 +91,7 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// 마우스 버튼을 눌렀을 때 (타일 클릭으로 캐릭터 선택)
+    /// 마우스 버튼을 눌렀을 때 (드래그 시작 준비)
     /// </summary>
    private void OnMouseDown()
     {
@@ -117,109 +117,117 @@ public class PlayerController : MonoBehaviour
             }
         }
         
+        // 클릭한 타일 저장 (MouseUp에서 사용)
+        clickedTileOnDown = clickedTile;
+        
+        // 드래그 시작 위치 저장
+        startDragPosition = Input.mousePosition;
+        
         // 타일을 클릭했고, 그 타일 안에 캐릭터가 있는 경우
         if (clickedTile != null && clickedTile.InTilePlayerCharacters != null && clickedTile.InTilePlayerCharacters.Count > 0)
         {
-            // 같은 타일을 다시 클릭한 경우 선택 해제
-            if (isTileSelected && selectedTile == clickedTile)
+            // 드래그 이동 준비를 위한 정보 저장
+            PlayerCharacter character = clickedTile.InTilePlayerCharacters[0];
+            if (character != null)
             {
-                DeselectTile();
-                return;
+                startWorldPosition = character.transform.position;
+                startTile = clickedTile; // 시작 타일 저장
+                isDragging = false;
+                pendingTargetTile = null;
+                charactersToMove.Clear();
+                
+                // 모든 캐릭터에 이동 완료 콜백 등록
+                foreach (var charInTile in clickedTile.InTilePlayerCharacters)
+                {
+                    if (charInTile != null)
+                    {
+                        charInTile.OnMoveCompleted = OnCharacterMoveCompleted;
+                    }
+                }
+                
+                // 드래그 다운 시에는 타일을 보여주지 않음 (드래그 상태 전환 후에만 표시)
             }
-            
-            // 이전 선택 해제
-            DeselectTile();
-            
-            // 새로운 타일 선택
-            SelectTile(clickedTile);
-            
-            // 드래그 시작 위치 저장 (드래그 시작 감지용)
-            startDragPosition = Input.mousePosition;
-            startTile = clickedTile; // 시작 타일 저장
-            
-            return;
         }
-
-       // 타일을 클릭하지 않았거나 타일 안에 캐릭터가 없으면 선택 해제
-       DeselectTile();
-       startTile = null;
-       pendingTargetTile = null;
-       charactersToMove.Clear();
-       DeselectCharacter();
+        else
+        {
+            // 타일을 클릭하지 않았거나 타일 안에 캐릭터가 없으면 선택 해제
+            startTile = null;
+            pendingTargetTile = null;
+            charactersToMove.Clear();
+            DeselectCharacter();
+            DeselectTile();
+        }
     }
     /// <summary>
     /// 마우스 드래그 중
     /// </summary>
     private void OnMouseDrag()
     {
-        // 타일이 선택된 상태에서 드래그가 시작되면 선택 해제하고 드래그 상태로 전환
-        if (isTileSelected && selectedTile != null)
+        // clickedTileOnDown이 있으면 드래그 이동 가능
+        if (clickedTileOnDown != null && clickedTileOnDown.InTilePlayerCharacters != null && clickedTileOnDown.InTilePlayerCharacters.Count > 0)
         {
             currentDragPosition = Input.mousePosition;
             float dragDistance = Vector3.Distance(startDragPosition, currentDragPosition);
             
+            // 일정 거리(10픽셀) 이상 이동하면 드래그 상태로 전환
             if (dragDistance > 10f) // 10픽셀 이상 드래그하면 드래그 시작
             {
-                // 타일 선택 상태 해제하고 드래그 상태로 전환
-                Tile tileToMove = selectedTile;
-                PlayerCharacter character = tileToMove.InTilePlayerCharacters[0];
-                
-                if (character != null)
+                // 타일 선택 상태가 있으면 해제하고 드래그 상태로 전환
+                if (isTileSelected)
                 {
                     DeselectTile();
+                }
+                
+                // 드래그 상태로 전환 (한 번만 실행)
+                if (!isDragging)
+                {
+                    Tile tileToMove = clickedTileOnDown;
+                    PlayerCharacter character = tileToMove.InTilePlayerCharacters[0];
                     
-                    SelectCharcter(character);
-                    startWorldPosition = character.transform.position;
-                    startTile = tileToMove;
-                    hasSelectedCharacter = true;
-                    isDragging = true;
-                    pendingTargetTile = null;
-                    charactersToMove.Clear();
-                    
-                    // 모든 캐릭터에 이동 완료 콜백 등록
-                    foreach (var charInTile in tileToMove.InTilePlayerCharacters)
+                    if (character != null)
                     {
-                        if (charInTile != null)
+                        SelectCharcter(character);
+                        startWorldPosition = character.transform.position;
+                        startTile = tileToMove;
+                        isDragging = true; // 드래그 상태로 전환
+                        pendingTargetTile = null;
+                        charactersToMove.Clear();
+                        
+                        // 모든 캐릭터에 이동 완료 콜백 등록
+                        foreach (var charInTile in tileToMove.InTilePlayerCharacters)
                         {
-                            charInTile.OnMoveCompleted = OnCharacterMoveCompleted;
+                            if (charInTile != null)
+                            {
+                                charInTile.OnMoveCompleted = OnCharacterMoveCompleted;
+                            }
                         }
+                        
+                        // 드래그 상태로 전환되었을 때만 모든 타일 표시
+                        ShowAllTiles();
                     }
-                    
-                    // 드래그 시작 시 모든 타일 표시
-                    ShowAllTiles();
+                }
+                
+                // 드래그 중에는 타일이 타겟되었을 때만 라인 렌더러 업데이트
+                if (SelectedCharcter != null && isDragging)
+                {
+                    UpdateDragLine();
                 }
             }
             else
             {
-                // 드래그 거리가 부족하면 아무것도 하지 않음 (타일 선택 상태 유지)
-                return;
-            }
-        }
-        
-        if (SelectedCharcter == null || !hasSelectedCharacter)
-            return;
-
-        currentDragPosition = Input.mousePosition;
-        
-        // 드래그 거리가 일정 이상이면 드래그 시작
-        float dragDistance2 = Vector3.Distance(startDragPosition, currentDragPosition);
-        if (dragDistance2 > 10f) // 10픽셀 이상 드래그하면 이동 시작
-        {
-            if (!isDragging)
-            {
-                // 드래그 시작 시 모든 타일 표시
-                isDragging = true;
-                ShowAllTiles();
+                // 드래그 거리가 부족하면 타일을 보여주지 않음
+                if (isDragging)
+                {
+                    HideAllTiles();
+                    HideDragLine();
+                    isDragging = false;
+                    DeselectCharacter();
+                }
             }
             
-            // 타일이 타겟되었을 때만 라인 렌더러 업데이트
-            UpdateDragLine();
+            return;
         }
-        else
-        {
-            // 드래그 거리가 부족하면 라인 숨김
-            HideDragLine();
-        }
+        
     }
     
     /// <summary>
@@ -371,44 +379,14 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// 마우스 버튼을 뗐을 때 (이동 명령)
+    /// 마우스 버튼을 뗐을 때 (이동 명령 또는 타일 선택)
     /// </summary>
     private void OnMouseUp()
     {
-        if (SelectedCharcter == null || !hasSelectedCharacter)
-            return;
-
-        if (isDragging)
+        // 드래그가 있었고 도착타일이 있는 경우 (타일 이동 처리)
+        if (isDragging && currentTargetTile != null)
         {
-            // 타일이 타겟으로 설정되어 있지 않으면 이동하지 않음
-            if (currentTargetTile == null)
-            {
-                // 타겟 하이라이트 비활성화
-                HideTargetHighlight();
-                
-                // 모든 타일 숨김
-                HideAllTiles();
-                
-                // 상태 초기화
-                isDragging = false;
-                hasSelectedCharacter = false;
-                startTile = null;
-                pendingTargetTile = null;
-                charactersToMove.Clear();
-                movingCharactersWithOutline.Clear();
-                
-                // 모든 캐릭터의 콜백 해제
-                ClearCharacterCallbacks();
-                
-                // 드래그 라인 숨김
-                HideDragLine();
-                
-                // 타일 선택 해제
-                DeselectTile();
-                return;
-            }
-            
-            // 시작 타일과 목표 타일이 다른 경우
+            // 시작 타일과 목표 타일이 다른 경우에만 이동
             if (startTile != null && startTile != currentTargetTile)
             {
                 // 이동할 캐릭터 목록 저장 (복사본 생성)
@@ -540,25 +518,98 @@ public class PlayerController : MonoBehaviour
                 {
                     startTile.UpdateCharacterOutlines();
                 }
+                
+                // 타겟 하이라이트 비활성화
+                HideTargetHighlight();
+                currentTargetTile = null;
+                
+                // 모든 타일 숨김
+                HideAllTiles();
+                
+                // 상태 초기화 (startTile은 이동 완료 후 초기화)
+                isDragging = false;
+                DeselectCharacter();
+                
+                // 드래그 라인 숨김
+                HideDragLine();
+                
+                clickedTileOnDown = null;
+                return;
+            }
+            else
+            {
+                // 같은 타일이거나 startTile이 null인 경우 이동하지 않음
+                HideTargetHighlight();
+                currentTargetTile = null;
+                HideAllTiles();
+                isDragging = false;
+                DeselectCharacter();
+                HideDragLine();
+                DeselectTile();
+                
+                clickedTileOnDown = null;
+                return;
             }
         }
         
-        // 타겟 하이라이트 비활성화
+        // 드래그가 없었거나 도착타일이 없는 경우 타일 선택 처리
+        if (clickedTileOnDown != null && clickedTileOnDown.InTilePlayerCharacters != null && clickedTileOnDown.InTilePlayerCharacters.Count > 0)
+        {
+            // MouseUp 시점에서 클릭한 타일 확인
+            Vector2 mousePos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+            RaycastHit2D[] hits = Physics2D.RaycastAll(mousePos, Vector2.zero, Mathf.Infinity);
+            
+            Tile clickedTileOnUp = null;
+            foreach (RaycastHit2D hit in hits)
+            {
+                if ((TileLayerMask.value & (1 << hit.collider.gameObject.layer)) != 0)
+                {
+                    Tile tile = hit.collider.GetComponent<Tile>();
+                    if (tile != null)
+                    {
+                        clickedTileOnUp = tile;
+                        break;
+                    }
+                }
+            }
+            
+            // 드래그 다운한 타일과 드래그 업한 타일이 같은 경우에만 타일 선택/해제
+            if (clickedTileOnUp == clickedTileOnDown)
+            {
+                // 같은 타일을 다시 클릭한 경우 선택 해제
+                if (isTileSelected && selectedTile == clickedTileOnDown)
+                {
+                    DeselectTile();
+                    HideAllTiles();
+                }
+                else
+                {
+                    // 새로운 타일 선택
+                    DeselectTile();
+                    SelectTile(clickedTileOnDown);
+                    // 타일 선택 시에는 타일들을 숨김 (선택된 타일만 공격 범위 표시)
+                    HideAllTiles();
+                }
+            }
+            else
+            {
+                // 다른 타일이거나 타일이 아닌 경우 타일 선택 해제
+                DeselectTile();
+                HideAllTiles();
+            }
+            
+            clickedTileOnDown = null;
+            return;
+        }
+        
+        // 그 외의 경우 타일 숨김 및 상태 초기화
         HideTargetHighlight();
         currentTargetTile = null;
-        
-        // 모든 타일 숨김
         HideAllTiles();
-        
-        // 상태 초기화 (startTile은 이동 완료 후 초기화)
         isDragging = false;
-        hasSelectedCharacter = false;
-        
-        // 드래그 라인 숨김
         HideDragLine();
-        
-        // 타일 선택 해제
         DeselectTile();
+        clickedTileOnDown = null;
     }
 
     /// <summary>
@@ -626,8 +677,6 @@ public class PlayerController : MonoBehaviour
         {
             SelectedCharcter.OnSelected();
         }
-
-        // 아웃라인은 타일의 캐릭터 수에 따라 자동으로 설정되므로 여기서는 설정하지 않음
     }
 
     /// <summary>
@@ -691,7 +740,6 @@ public class PlayerController : MonoBehaviour
         ClearCharacterCallbacks();
         
         SelectedCharcter = null;
-        hasSelectedCharacter = false;
         isDragging = false;
         startTile = null;
         pendingTargetTile = null;
