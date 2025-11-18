@@ -26,9 +26,12 @@ public class PlayerCharacter : MonoBehaviourPunCallbacks
     public PhotonView PV;
 
     private Vector3 targetPosition;
+    private Vector3 originalTargetPosition; // 원본 타겟 위치 (미러링 전)
     private bool isMoving = false;
     private bool isSelected = false;
     private int currentMoveAnimationIndex = 0;
+    
+    public MirroringObject MirroringObject; // 미러링 기능 담당 클래스
     
     // 이동 완료 콜백 추가
     public System.Action<PlayerCharacter> OnMoveCompleted;
@@ -43,21 +46,46 @@ public class PlayerCharacter : MonoBehaviourPunCallbacks
         {
             PV = GetComponent<PhotonView>();
         }
-    }
-
-    void Start()
-    {
-        if (Model != null)
+        
+        // MirroringObject 컴포넌트 가져오기 또는 추가
+        if (MirroringObject == null)
         {
-            Model.OverrideControllerInit();
+            MirroringObject = GetComponent<MirroringObject>();
+            if (MirroringObject == null)
+            {
+                MirroringObject = gameObject.AddComponent<MirroringObject>();
+            }
         }
     }
+
+  void Start()
+{
+    if (Model != null)
+    {
+        Model.OverrideControllerInit();
+    }
+    
+    // MirroringObject 초기화 확인
+    if (MirroringObject != null && !MirroringObject.IsOriginalPositionInitialized())
+    {
+        MirroringObject.SetOriginalPosition(transform.position);
+    }
+    
+    // 원본 타겟 위치 초기화
+    originalTargetPosition = MirroringObject != null ? MirroringObject.GetOriginalPosition() : transform.position;
+}
 
     void Update()
     {
         if (isMoving)
         {
             HandleMovement();
+        }
+        
+        // 미러링 적용 (상대방 캐릭터인 경우)
+        if (MirroringObject != null)
+        {
+            MirroringObject.ApplyMirroring();
         }
     }
 
@@ -84,9 +112,24 @@ public class PlayerCharacter : MonoBehaviourPunCallbacks
     /// </summary>
     private void MoveToLocal(Vector3 target, bool syncAnimation = true)
     {
-        targetPosition = target;
+        // 타겟 위치를 원본 위치로 저장 (미러링 전)
+        // 네트워크로 받은 타겟 위치는 항상 원본 좌표 (소유자가 보낸 원본 좌표)
+        originalTargetPosition = target;
+        
+        // 표시용 타겟 위치 설정 (미러링 여부에 따라)
+        if (MirroringObject != null && MirroringObject.ShouldApplyMirroring())
+        {
+            targetPosition = IngameManager.Instance.MirrorPosition(originalTargetPosition);
+        }
+        else
+        {
+            targetPosition = originalTargetPosition;
+        }
+        
         // 2D 게임이므로 Z 좌표는 유지 (깊이 유지)
+        Vector3 currentOriginalPos = MirroringObject != null ? MirroringObject.GetOriginalPosition() : transform.position;
         targetPosition.z = transform.position.z;
+        originalTargetPosition.z = currentOriginalPos.z;
         
         isMoving = true;
         
@@ -131,7 +174,11 @@ public class PlayerCharacter : MonoBehaviourPunCallbacks
     /// </summary>
     private void HandleMovement()
     {
-        Vector3 direction = targetPosition - transform.position;
+        // 원본 위치 가져오기
+        Vector3 originalPosition = MirroringObject != null ? MirroringObject.GetOriginalPosition() : transform.position;
+        
+        // 원본 위치에서 이동 계산 (미러링 전 원본 위치 사용)
+        Vector3 direction = originalTargetPosition - originalPosition;
         float distance = direction.magnitude;
 
         // 목표 지점에 도달했는지 확인
@@ -142,22 +189,41 @@ public class PlayerCharacter : MonoBehaviourPunCallbacks
             return;
         }
 
-        // Lerp를 사용한 부드러운 이동
+        // Lerp를 사용한 부드러운 이동 (원본 위치에서)
         float moveStep = MoveSpeed * Time.deltaTime;
         float lerpSpeed = moveStep / distance; // 거리에 따른 Lerp 속도 조절
-        transform.position = Vector3.Lerp(transform.position, targetPosition, lerpSpeed);
+        originalPosition = Vector3.Lerp(originalPosition, originalTargetPosition, lerpSpeed);
+        
+        // MirroringObject에 원본 위치 업데이트
+        if (MirroringObject != null)
+        {
+            MirroringObject.UpdateOriginalPosition(originalPosition);
+        }
+        
+        // 내 캐릭터면 실제 위치 설정, 상대방은 미러링 적용 (ApplyMirroring에서)
+        if (PV == null || PV.IsMine)
+        {
+            transform.position = originalPosition;
+        }
 
         // 이동 방향에 따라 스프라이트 플립 (회전 없이)
         Vector3 moveDirection = direction.normalized;
         if (moveDirection.magnitude > 0.1f)
         {
+            // 미러링된 캐릭터인 경우 방향 반전
+            float flipDirectionX = moveDirection.x;
+            if (MirroringObject != null && MirroringObject.ShouldApplyMirroring())
+            {
+                flipDirectionX = -flipDirectionX;
+            }
+            
             // X 방향에 따라 플립 (오른쪽: 1, 왼쪽: -1)
-            if (moveDirection.x < 0.01f)
+            if (flipDirectionX < 0.01f)
             {
                 // 오른쪽으로 이동 - 정방향
                 transform.localScale = new Vector3(Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
             }
-            else if (moveDirection.x > -0.01f)
+            else if (flipDirectionX > -0.01f)
             {
                 // 왼쪽으로 이동 - 반전
                 transform.localScale = new Vector3(-Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
@@ -167,6 +233,7 @@ public class PlayerCharacter : MonoBehaviourPunCallbacks
             UpdateAnimationDirection();
         }
     }
+    
 
     /// <summary>
     /// 목표 지점 도달 시 호출
@@ -174,7 +241,23 @@ public class PlayerCharacter : MonoBehaviourPunCallbacks
     private void OnReachedTarget()
     {
         isMoving = false;
-        transform.position = targetPosition; // 정확한 위치로 설정
+        
+        // MirroringObject에 원본 위치 업데이트
+        if (MirroringObject != null)
+        {
+            MirroringObject.UpdateOriginalPosition(originalTargetPosition);
+        }
+        
+        // 내 캐릭터면 실제 위치 설정, 상대방은 미러링 적용
+        if (PV == null || PV.IsMine)
+        {
+            Vector3 originalPos = MirroringObject != null ? MirroringObject.GetOriginalPosition() : originalTargetPosition;
+            transform.position = originalPos;
+        }
+        else if (MirroringObject != null)
+        {
+            MirroringObject.ApplyMirroringPosition();
+        }
         
         // 대기 애니메이션 재생 (네트워크 동기화)
         if (Model != null && Model.IDLE_List != null && Model.IDLE_List.Count > 0)
@@ -369,8 +452,83 @@ public class PlayerCharacter : MonoBehaviourPunCallbacks
     [PunRPC]
     public void SetSpawnPosition(Vector3 position)
     {
-        transform.position = position;
+        // MirroringObject에 원본 위치 설정
+        if (MirroringObject != null)
+        {
+            MirroringObject.SetOriginalPosition(position);
+            if (MirroringObject.ShouldApplyMirroring())
+            {
+                MirroringObject.ApplyMirroringPosition();
+            }
+            else
+            {
+                transform.position = position;
+            }
+        }
+        else
+        {
+            transform.position = position;
+        }
+        
+        originalTargetPosition = position;
         Debug.Log($"[PlayerCharacter] 소환 위치 설정: {position}");
+    }
+
+    /// <summary>
+    /// 캐릭터 활성화 (네트워크 동기화) - Renderer/Collider 활성화
+    /// </summary>
+    [PunRPC]
+    public void SetCharacterSpawnedSync()
+    {
+        // GameObject 활성화 (항상 활성화 상태 유지)
+        gameObject.SetActive(true);
+
+        // Model 초기화
+        if (Model != null)
+        {
+            Model.OverrideControllerInit();
+        }
+
+        // Renderer 활성화
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        foreach (var renderer in renderers)
+        {
+            if (renderer != null)
+            {
+                renderer.enabled = true;
+            }
+        }
+
+        // Collider 활성화
+        Collider[] colliders = GetComponentsInChildren<Collider>();
+        foreach (var collider in colliders)
+        {
+            if (collider != null)
+            {
+                collider.enabled = true;
+            }
+        }
+
+        // PlayerCharacter 컴포넌트 활성화
+        enabled = true;
+
+        // MirroringObject 초기화 확인
+        if (MirroringObject != null)
+        {
+            // 원본 위치가 초기화되지 않았다면 현재 위치로 설정
+            if (!MirroringObject.IsOriginalPositionInitialized())
+            {
+                MirroringObject.SetOriginalPosition(transform.position);
+            }
+
+            // 상대방 캐릭터인 경우 즉시 미러링 적용
+            if (MirroringObject.ShouldApplyMirroring())
+            {
+                MirroringObject.ApplyMirroringPosition();
+            }
+        }
+
+        Debug.Log($"[PlayerCharacter] 캐릭터 활성화 동기화 완료: {Name}");
     }
 
     /// <summary>
@@ -397,4 +555,5 @@ public class PlayerCharacter : MonoBehaviourPunCallbacks
             mat.material = material;
         }
     }
+
 }

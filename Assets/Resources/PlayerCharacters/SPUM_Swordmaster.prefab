@@ -357,6 +357,7 @@ GameObject:
   - component: {fileID: -7425855099794629760}
   - component: {fileID: 8727110068384744305}
   - component: {fileID: -7178089218268077335}
+  - component: {fileID: -3999408890048439563}
   m_Layer: 5
   m_Name: SPUM_Swordmaster
   m_TagString: Untagged
@@ -3415,9 +3416,10 @@ MonoBehaviour:
   AttackAnimationSpeed: 2
   MoveSpeed: 5
   ReachedDistance: 0.1
-  AttackSystem: {fileID: 0}
+  AttackSystem: {fileID: -7178089218268077335}
   Model: {fileID: 555128149485815383}
-  PV: {fileID: 0}
+  PV: {fileID: 8727110068384744305}
+  MirroringObject: {fileID: -3999408890048439563}
   ChangeMaterials:
   - {fileID: 6516627951094413060}
   - {fileID: 2168080363031159909}
@@ -3471,6 +3473,18 @@ MonoBehaviour:
   PlayerCharacter: {fileID: -7425855099794629760}
   Model: {fileID: 555128149485815383}
   PV: {fileID: 8727110068384744305}
+--- !u!114 &-3999408890048439563
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1354516506673247624}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject
 --- !u!1 &1369942605308794907
 GameObject:
   m_ObjectHideFlags: 0

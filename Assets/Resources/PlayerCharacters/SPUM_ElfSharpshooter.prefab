@@ -3607,6 +3607,7 @@ GameObject:
   - component: {fileID: 5848319905383727972}
   - component: {fileID: -7939147033202181999}
   - component: {fileID: -3363951982926623939}
+  - component: {fileID: -5485868650387110603}
   m_Layer: 5
   m_Name: SPUM_ElfSharpshooter
   m_TagString: Untagged
@@ -6635,9 +6636,10 @@ MonoBehaviour:
   AttackAnimationSpeed: 2
   MoveSpeed: 5
   ReachedDistance: 0.1
-  AttackSystem: {fileID: 0}
+  AttackSystem: {fileID: -3363951982926623939}
   Model: {fileID: 5441880914106489204}
-  PV: {fileID: 0}
+  PV: {fileID: -7939147033202181999}
+  MirroringObject: {fileID: -5485868650387110603}
   ChangeMaterials:
   - {fileID: 5000931008477953805}
   - {fileID: 2487439519727863979}
@@ -6688,6 +6690,18 @@ MonoBehaviour:
   PlayerCharacter: {fileID: 5848319905383727972}
   Model: {fileID: 5441880914106489204}
   PV: {fileID: -7939147033202181999}
+--- !u!114 &-5485868650387110603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6311861856165175232}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject
 --- !u!1 &6349283776411875601
 GameObject:
   m_ObjectHideFlags: 0

@@ -2801,6 +2801,7 @@ GameObject:
   - component: {fileID: -6403071183822062256}
   - component: {fileID: -2695339452365813540}
   - component: {fileID: 4982160389883349449}
+  - component: {fileID: 5845170508914196335}
   m_Layer: 5
   m_Name: SPUM_SkeletonAssassin
   m_TagString: Untagged
@@ -5799,9 +5800,10 @@ MonoBehaviour:
   AttackAnimationSpeed: 2
   MoveSpeed: 5
   ReachedDistance: 0.1
-  AttackSystem: {fileID: 0}
+  AttackSystem: {fileID: 4982160389883349449}
   Model: {fileID: 4479428206937493634}
-  PV: {fileID: 0}
+  PV: {fileID: -2695339452365813540}
+  MirroringObject: {fileID: 5845170508914196335}
   ChangeMaterials:
   - {fileID: 174093262273164593}
   - {fileID: 1952072138658039952}
@@ -5851,6 +5853,18 @@ MonoBehaviour:
   PlayerCharacter: {fileID: -6403071183822062256}
   Model: {fileID: 4479428206937493634}
   PV: {fileID: -2695339452365813540}
+--- !u!114 &5845170508914196335
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4847838609770726236}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject
 --- !u!1 &4983291757369025525
 GameObject:
   m_ObjectHideFlags: 0

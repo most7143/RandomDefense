@@ -1542,6 +1542,7 @@ GameObject:
   - component: {fileID: -2791619930498950957}
   - component: {fileID: -3271548998781450669}
   - component: {fileID: 1789932893550293048}
+  - component: {fileID: 3302931951139711940}
   m_Layer: 5
   m_Name: SPUM_SkeletonMage
   m_TagString: Untagged
@@ -4560,9 +4561,10 @@ MonoBehaviour:
   AttackAnimationSpeed: 2
   MoveSpeed: 5
   ReachedDistance: 0.1
-  AttackSystem: {fileID: 0}
+  AttackSystem: {fileID: 1789932893550293048}
   Model: {fileID: 3652040343825211507}
-  PV: {fileID: 0}
+  PV: {fileID: -3271548998781450669}
+  MirroringObject: {fileID: 3302931951139711940}
   ChangeMaterials:
   - {fileID: 191559467433558791}
   - {fileID: 6157399250563863931}
@@ -4612,6 +4614,18 @@ MonoBehaviour:
   PlayerCharacter: {fileID: -2791619930498950957}
   Model: {fileID: 3652040343825211507}
   PV: {fileID: -3271548998781450669}
+--- !u!114 &3302931951139711940
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3869153255920872131}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject
 --- !u!1 &3897179262474473887
 GameObject:
   m_ObjectHideFlags: 0

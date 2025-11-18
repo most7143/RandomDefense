@@ -3353,6 +3353,7 @@ GameObject:
   - component: {fileID: -5462991984746943400}
   - component: {fileID: 1579173573875981517}
   - component: {fileID: 7383444493395716559}
+  - component: {fileID: 2560027769493908143}
   m_Layer: 5
   m_Name: SPUM_DemonAdeptMage
   m_TagString: Untagged
@@ -6381,9 +6382,10 @@ MonoBehaviour:
   AttackAnimationSpeed: 2
   MoveSpeed: 5
   ReachedDistance: 0.1
-  AttackSystem: {fileID: 0}
+  AttackSystem: {fileID: 7383444493395716559}
   Model: {fileID: 681373116714757727}
-  PV: {fileID: 0}
+  PV: {fileID: 1579173573875981517}
+  MirroringObject: {fileID: 2560027769493908143}
   ChangeMaterials:
   - {fileID: 6272330702354484442}
   - {fileID: 8563237833177401848}
@@ -6430,6 +6432,18 @@ MonoBehaviour:
   PlayerCharacter: {fileID: -5462991984746943400}
   Model: {fileID: 681373116714757727}
   PV: {fileID: 1579173573875981517}
+--- !u!114 &2560027769493908143
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6194015696605001386}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject
 --- !u!1 &6256023182237157374
 GameObject:
   m_ObjectHideFlags: 0

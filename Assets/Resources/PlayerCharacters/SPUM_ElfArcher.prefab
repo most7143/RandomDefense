@@ -4944,6 +4944,7 @@ GameObject:
   - component: {fileID: -7009993174239004550}
   - component: {fileID: 7243122633880879708}
   - component: {fileID: -4273109210141037505}
+  - component: {fileID: -4626792206665480210}
   m_Layer: 5
   m_Name: SPUM_ElfArcher
   m_TagString: Untagged
@@ -7952,9 +7953,10 @@ MonoBehaviour:
   AttackAnimationSpeed: 2
   MoveSpeed: 5
   ReachedDistance: 0.1
-  AttackSystem: {fileID: 0}
+  AttackSystem: {fileID: -4273109210141037505}
   Model: {fileID: 5963537180353877278}
-  PV: {fileID: 0}
+  PV: {fileID: 7243122633880879708}
+  MirroringObject: {fileID: -4626792206665480210}
   ChangeMaterials:
   - {fileID: 1225980345612968245}
   - {fileID: 3511336114674527853}
@@ -8004,3 +8006,15 @@ MonoBehaviour:
   PlayerCharacter: {fileID: -7009993174239004550}
   Model: {fileID: 5963537180353877278}
   PV: {fileID: 7243122633880879708}
+--- !u!114 &-4626792206665480210
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9158167135536924216}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject

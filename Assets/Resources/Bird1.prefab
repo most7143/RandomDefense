@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 5507032391940299191}
   - component: {fileID: 6152093040392185947}
   - component: {fileID: 4757821924517598289}
+  - component: {fileID: 7795982129243124101}
   m_Layer: 0
   m_Name: Bird1
   m_TagString: Enemy
@@ -152,7 +153,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Monster
   Name: 1
-  SpanwerIndex: 0
   Level: 1
   HP: 10
   MaxHP: 0
@@ -161,6 +161,7 @@ MonoBehaviour:
   PV: {fileID: 5507032391940299191}
   HPBar: {fileID: 4882504380297646144}
   HPBarImage: {fileID: 7575747362635112647}
+  MirroringObject: {fileID: 7795982129243124101}
 --- !u!61 &4757821924517598289
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -207,6 +208,18 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 8, y: 6.26}
   m_EdgeRadius: 0
+--- !u!114 &7795982129243124101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2687127192478811734}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject
 --- !u!1 &4669805459022075009
 GameObject:
   m_ObjectHideFlags: 0

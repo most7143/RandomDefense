@@ -3936,6 +3936,7 @@ GameObject:
   - component: {fileID: -8569604508882075788}
   - component: {fileID: -2790423239181425374}
   - component: {fileID: 732230802748485864}
+  - component: {fileID: 8495014086947636760}
   m_Layer: 5
   m_Name: SPUM_DemonWizard
   m_TagString: Untagged
@@ -6984,9 +6985,10 @@ MonoBehaviour:
   AttackAnimationSpeed: 2
   MoveSpeed: 5
   ReachedDistance: 0.1
-  AttackSystem: {fileID: 0}
+  AttackSystem: {fileID: 732230802748485864}
   Model: {fileID: 4710366085002530807}
-  PV: {fileID: 0}
+  PV: {fileID: -2790423239181425374}
+  MirroringObject: {fileID: 8495014086947636760}
   ChangeMaterials:
   - {fileID: 1861687075361224249}
   - {fileID: 420918396565360172}
@@ -7036,6 +7038,18 @@ MonoBehaviour:
   PlayerCharacter: {fileID: -8569604508882075788}
   Model: {fileID: 4710366085002530807}
   PV: {fileID: -2790423239181425374}
+--- !u!114 &8495014086947636760
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7703195771484518730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject
 --- !u!1 &7860285634980709751
 GameObject:
   m_ObjectHideFlags: 0

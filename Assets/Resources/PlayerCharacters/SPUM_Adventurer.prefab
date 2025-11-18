@@ -1905,6 +1905,7 @@ GameObject:
   - component: {fileID: 6320052429174059545}
   - component: {fileID: 4291536613285359631}
   - component: {fileID: 3611941369918125545}
+  - component: {fileID: -321649183012625861}
   m_Layer: 5
   m_Name: SPUM_Adventurer
   m_TagString: Untagged
@@ -4956,6 +4957,7 @@ MonoBehaviour:
   AttackSystem: {fileID: 3611941369918125545}
   Model: {fileID: 4875316719748868056}
   PV: {fileID: 4291536613285359631}
+  MirroringObject: {fileID: -321649183012625861}
   ChangeMaterials:
   - {fileID: 2532488849006070064}
   - {fileID: 929482420638919754}
@@ -5003,6 +5005,18 @@ MonoBehaviour:
   PlayerCharacter: {fileID: 6320052429174059545}
   Model: {fileID: 4875316719748868056}
   PV: {fileID: 4291536613285359631}
+--- !u!114 &-321649183012625861
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4744537460265103821}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject
 --- !u!1 &5025037695132695155
 GameObject:
   m_ObjectHideFlags: 0

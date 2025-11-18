@@ -5,14 +5,9 @@ using System.Collections;
 
 public class MonsterSpawner : MonoBehaviourPunCallbacks
 {
-    [Header("Spawner Settings")]
-    [Tooltip("스포너 인덱스 (Y 위치로 자동 할당됩니다)")]
-    public int SpawnerIndex = 0;
-
     [Header("Monster Settings")]
     [Tooltip("스폰할 몬스터 타입 (Resources 폴더에서 프리팹을 로드합니다)")]
     public MonsterNames MonsterType = MonsterNames.Bird1;
-
 
     public int AliveMonsterCount = 0;
 
@@ -29,7 +24,6 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
     public Transform[] MovePoints;
 
     private PhotonView pv;
-    private bool isMySpawner = false;
 
     void Start()
     {
@@ -43,91 +37,11 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
             pv.ViewID = PhotonNetwork.AllocateViewID(0);
         }
 
-        // Y 위치로 스포너 인덱스 자동 설정
-        SetSpawnerIndexByPosition();
-
         // IngameManager에 스포너 등록
-        RegisterSpawnerToManager();
-
-        // 스포너 소유권 확인
-        CheckSpawnerOwnership();
-
-    }
-
-    /// <summary>
-    /// IngameManager에 스포너 등록
-    /// </summary>
-    private void RegisterSpawnerToManager()
-    {
-        if (IngameManager.Instance == null)
-            return;
-
-        if (SpawnerIndex == 1)
+        if (IngameManager.Instance != null)
         {
-            IngameManager.Instance.TopSpawner = this;
+            IngameManager.Instance.Spawner = this;
         }
-        else if (SpawnerIndex == 2)
-        {
-            IngameManager.Instance.DownSpawner = this;
-        }
-    }
-
-    /// <summary>
-    /// Y 위치로 스포너 인덱스 설정 (Y가 높으면 위쪽=1, 낮으면 아래쪽=2)
-    /// </summary>
-    private void SetSpawnerIndexByPosition()
-    {
-        MonsterSpawner[] allSpawners = { IngameManager.Instance.TopSpawner, IngameManager.Instance.DownSpawner };
-        if (allSpawners.Length >= 2)
-        {
-            // Y 위치로 정렬 (높은 Y가 위쪽)
-            System.Array.Sort(allSpawners, (a, b) => b.transform.position.y.CompareTo(a.transform.position.y));
-
-            // 이 스포너가 위쪽인지 아래쪽인지 확인
-            if (allSpawners[0] == this)
-                SpawnerIndex = 1; // 위쪽
-            else if (allSpawners[1] == this)
-                SpawnerIndex = 2; // 아래쪽
-        }
-    }
-
-    /// <summary>
-    /// 이 스포너가 현재 클라이언트에 속하는지 확인합니다.
-    /// </summary>
-    private void CheckSpawnerOwnership()
-    {
-        if (IngameManager.Instance == null || SpawnerIndex == 0)
-        {
-            isMySpawner = false;
-            return;
-        }
-
-        // IngameManager의 MySpawnerIndex와 비교
-        isMySpawner = (SpawnerIndex == IngameManager.Instance.MySpawnerIndex);
-
-        Debug.Log($"[스포너 {SpawnerIndex}] 내 스포너 여부: {isMySpawner} (IngameManager.MySpawnerIndex: {IngameManager.Instance.MySpawnerIndex})");
-    }
-
-    public override void OnConnectedToMaster()
-    {
-        // 스포너 소유권 다시 확인
-        CheckSpawnerOwnership();
-
-        // 자동 시작 제거 - IngameManager에서 직접 호출
-    }
-
-    public override void OnJoinedRoom()
-    {
-        // 방에 입장하면 스포너 소유권 확인
-        CheckSpawnerOwnership();
-
-        // 자동 시작 제거 - IngameManager에서 직접 호출
-    }
-
-    public override void OnPlayerEnteredRoom(Player newPlayer)
-    {
-        // 다른 플레이어가 입장하면 스포너 소유권 다시 확인
-        CheckSpawnerOwnership();
     }
 
     IEnumerator StartRound(int round)
@@ -135,8 +49,8 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         if (isSpawning)
             yield break;
 
-        // 이 스포너가 내 것이 아니면 중단
-        if (!isMySpawner)
+        // PhotonNetwork가 연결되지 않았으면 스폰하지 않음
+        if (!PhotonNetwork.IsConnected)
             yield break;
 
         isSpawning = true;
@@ -145,13 +59,13 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         // 해당 라운드의 몬스터 수 가져오기
         int monstersToSpawn = 40;
 
-        Debug.Log($"[스포너 {SpawnerIndex}] 라운드 {round} 시작: {monstersToSpawn}마리 스폰 예정");
+        Debug.Log($"[스포너] 라운드 {round} 시작: {monstersToSpawn}마리 스폰 예정 (클라이언트: {PhotonNetwork.LocalPlayer.ActorNumber})");
 
         // 몬스터 스폰
         for (int i = 0; i < monstersToSpawn; i++)
         {
-            // 이 스포너가 내 것이 아니면 중단
-            if (!isMySpawner)
+            // PhotonNetwork 연결 확인
+            if (!PhotonNetwork.IsConnected)
             {
                 break;
             }
@@ -184,12 +98,11 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         // 전체 몬스터 수로 체크
         if (monstersSpawnedCount >= IngameManager.Instance.MaxMonsterCount)
         {
-            Debug.Log($"[스포너 {SpawnerIndex}] 라운드 종료 최대 마리수 도달");
+            Debug.Log($"[스포너] 라운드 종료 최대 마리수 도달 (클라이언트: {PhotonNetwork.LocalPlayer.ActorNumber})");
         }
         else
         {
-
-            Debug.Log($"[스포너 {SpawnerIndex}] 라운드 {round} 완료: {monstersSpawnedCount}마리 스폰됨");
+            Debug.Log($"[스포너] 라운드 {round} 완료: {monstersSpawnedCount}마리 스폰됨 (클라이언트: {PhotonNetwork.LocalPlayer.ActorNumber})");
         }
     }
 
@@ -223,10 +136,7 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
             Monster monsterComponent = monster.GetComponent<Monster>();
             PhotonView monsterPV = monster.GetComponent<PhotonView>();
 
-            // 몬스터의 스포너 인덱스 설정
-            monsterComponent.SpanwerIndex = SpawnerIndex;
-
-            // 생성된 몬스터에 MovePoints 전달 (RPC 사용)
+            // 생성된 몬스터에 MovePoints 전달 (RPC 사용, 미러링 적용)
             if (monsterPV != null && MovePoints != null && MovePoints.Length > 0)
             {
                 // Transform 배열을 Vector3 배열로 변환
@@ -243,42 +153,12 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
                 monsterPV.RPC("SetMovePoints", RpcTarget.AllBuffered, movePointPositions);
             }
 
-            // 상대 클라이언트의 몬스터인 경우 즉시 위치 조정 (로컬에서만)
-            if (monsterPV != null && !monsterPV.IsMine && IngameManager.Instance != null && IngameManager.Instance.TopSpawner != null)
+            Debug.Log($"[스포너] 몬스터 스폰됨: {monster.name} at {spawnPosition} (소유자: {PhotonNetwork.LocalPlayer.ActorNumber})");
+
+            // 내가 소유한 몬스터만 카운트
+            if (monsterPV != null && monsterPV.IsMine)
             {
-                // 즉시 위치 조정 (OnPhotonInstantiate보다 빠르게)
-                StartCoroutine(AdjustMonsterPositionNextFrame(monsterComponent));
-            }
-
-            Debug.Log($"[스포너 {SpawnerIndex}] 몬스터 스폰됨: {monster.name} at {spawnPosition}");
-
-            AliveMonsterCount++;
-        }
-    }
-
-    /// <summary>
-    /// 다음 프레임에 몬스터 위치 조정 (즉시 처리)
-    /// </summary>
-    private System.Collections.IEnumerator AdjustMonsterPositionNextFrame(Monster monster)
-    {
-        yield return null; // 한 프레임 대기
-
-        if (monster != null && IngameManager.Instance != null && IngameManager.Instance.TopSpawner != null)
-        {
-            MonsterSpawner topSpawner = IngameManager.Instance.TopSpawner;
-
-            if (topSpawner.MovePoints != null && topSpawner.MovePoints.Length > 0)
-            {
-                Vector3[] newMovePointPositions = new Vector3[topSpawner.MovePoints.Length];
-                for (int i = 0; i < topSpawner.MovePoints.Length; i++)
-                {
-                    if (topSpawner.MovePoints[i] != null)
-                    {
-                        newMovePointPositions[i] = topSpawner.MovePoints[i].position;
-                    }
-                }
-
-                monster.GetComponent<PhotonView>()?.RPC("SetMovePoints", RpcTarget.AllBuffered, newMovePointPositions);
+                AliveMonsterCount++;
             }
         }
     }
@@ -290,16 +170,18 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
 
     /// <summary>
     /// 외부에서 라운드 시작을 요청할 수 있는 메서드 (IngameManager에서 호출)
+    /// 각 클라이언트가 자신의 몬스터를 스폰합니다.
     /// </summary>
     public void RequestStartRound()
     {
-        if (isMySpawner && !isSpawning)
+        // PhotonNetwork가 연결되어 있고, 아직 스폰 중이 아니면 시작
+        if (PhotonNetwork.IsConnected && !isSpawning)
         {
             StartCoroutine(StartRound(currentRound));
         }
         else
         {
-            Debug.Log($"[스포너 {SpawnerIndex}] 스폰 요청 무시 (isMySpawner: {isMySpawner}, isSpawning: {isSpawning})");
+            Debug.Log($"[스포너] 스폰 요청 무시 (연결: {PhotonNetwork.IsConnected}, isSpawning: {isSpawning})");
         }
     }
 

@@ -64,7 +64,7 @@ public class PlayerCharacterGroup : MonoBehaviour
         for (int i = 1; i < GetAllCharacterNames.Length; i++)
         {
             CharacterNames characterName = GetAllCharacterNames[i];
-            
+
             // CharacterNames를 문자열로 변환하여 프리팹 이름 생성
             string prefabName = characterName.ToString();
 
@@ -85,70 +85,53 @@ public class PlayerCharacterGroup : MonoBehaviour
             // 각 캐릭터 종류당 PoolSizePerCharacter개씩 생성
             for (int j = 0; j < PoolSizePerCharacter; j++)
             {
-                // 포톤 네트워크가 연결되어 있으면 PhotonNetwork.Instantiate 사용 (네트워크 동기화)
-                // 연결되어 있지 않으면 일반 Instantiate 사용
+                // 로딩 씬에서는 항상 일반 Instantiate 사용
+                // (네트워크 동기화는 실제 소환 시에만 처리)
+                // 이렇게 하면 씬 전환 시 PhotonView 동기화 문제를 방지할 수 있습니다.
                 GameObject characterInstance;
-                
+
                 // 생성 위치를 카메라 밖으로 설정 (보이지 않게)
                 Vector3 hiddenPosition = new Vector3(0, -1000, 0);
-                
-                if (PhotonNetwork.IsConnected && PhotonNetwork.InRoom)
-                {
-                    // PhotonNetwork.Instantiate 사용 (네트워크 동기화를 위해)
-                    string prefabPath = "PlayerCharacters/SPUM_" + prefabName; // Resources 폴더 기준 경로
-                    characterInstance = PhotonNetwork.Instantiate(
-                        prefabPath,
-                        hiddenPosition,
-                        Quaternion.identity,
-                        0,
-                        null
-                    );
-                }
-                else
-                {
-                    // 일반 Instantiate 사용 (네트워크 없을 때)
-                    characterInstance = Instantiate(characterPrefab, hiddenPosition, Quaternion.identity);
-                }
-                
+
+                // 일반 Instantiate 사용 (로딩 씬에서는 네트워크 동기화 없이 준비만)
+                characterInstance = Instantiate(characterPrefab, hiddenPosition, Quaternion.identity);
+
                 if (characterInstance == null)
                 {
                     Debug.LogError($"[PlayerCharacterGroup] '{prefabName}' 프리팹 생성 실패!");
                     continue;
                 }
-                
-                // 생성 직후 즉시 비활성화 (로딩 씬에서 보이지 않게)
-                characterInstance.SetActive(false);
-                
+
                 // 부모를 현재 클래스(PlayerCharacterGroup)로 설정
                 characterInstance.transform.SetParent(transform);
-                
+
                 characterInstance.name = $"{prefabName}_{j}"; // 이름 설정 (인덱스 포함)
-                
+
                 // PlayerCharacter 컴포넌트 가져오기
                 PlayerCharacter playerCharacter = characterInstance.GetComponent<PlayerCharacter>();
-                
+
                 if (playerCharacter == null)
                 {
                     Debug.LogWarning($"[PlayerCharacterGroup] '{prefabName}' 프리팹에 PlayerCharacter 컴포넌트가 없습니다!");
-                    if (PhotonNetwork.IsConnected)
-                    {
-                        PhotonNetwork.Destroy(characterInstance);
-                    }
-                    else
-                    {
-                        Destroy(characterInstance);
-                    }
+                    Destroy(characterInstance);
                     continue;
+                }
+
+                // PhotonView가 있으면 ViewID를 0으로 초기화 (아직 네트워크에 등록하지 않음)
+                PhotonView pv = characterInstance.GetComponent<PhotonView>();
+                if (pv != null)
+                {
+                    pv.ViewID = 0; // 나중에 실제 소환 시 네트워크에 등록
                 }
 
                 // 캐릭터 이름 설정
                 playerCharacter.Name = characterName;
 
-                // 씬 전환 시에도 파괴되지 않도록 설정
-                DontDestroyOnLoad(characterInstance);
-
                 // List에 추가
                 characterList.Add(playerCharacter);
+
+                // 캐릭터를 비활성화 상태로 설정 (위치 이동, Renderer/Collider 비활성화)
+                SetCharacterDespawned(playerCharacter);
 
                 // 여러 개 생성 시 프레임 분산 (성능 개선)
                 if (j % 5 == 0)
@@ -159,7 +142,7 @@ public class PlayerCharacterGroup : MonoBehaviour
 
             processedCount++;
             Debug.Log($"[PlayerCharacterGroup] 캐릭터 프리팹 미리 생성: {characterName} x{PoolSizePerCharacter}개 ({processedCount}/{totalCharacters})");
-            
+
             // 각 캐릭터 종류 생성 후 한 프레임 대기
             yield return null;
         }
@@ -169,7 +152,7 @@ public class PlayerCharacterGroup : MonoBehaviour
         {
             totalCount += list.Count;
         }
-        
+
         isInitialized = true;
         Debug.Log($"[PlayerCharacterGroup] 초기화 완료: {Characters.Count}개 캐릭터 종류, 총 {totalCount}개 프리팹 생성됨");
     }
@@ -193,12 +176,12 @@ public class PlayerCharacterGroup : MonoBehaviour
         for (int i = 1; i < GetAllCharacterNames.Length; i++)
         {
             CharacterNames characterName = GetAllCharacterNames[i];
-            
+
             // CharacterNames를 문자열로 변환하여 프리팹 이름 생성
             string prefabName = characterName.ToString();
 
             // Resources 폴더에서 프리팹 로드
-            GameObject characterPrefab = Resources.Load<GameObject>("PlayerCharacters/" + "SPUM_"+prefabName);
+            GameObject characterPrefab = Resources.Load<GameObject>("PlayerCharacters/" + "SPUM_" + prefabName);
 
             if (characterPrefab == null)
             {
@@ -213,60 +196,43 @@ public class PlayerCharacterGroup : MonoBehaviour
             // 각 캐릭터 종류당 PoolSizePerCharacter개씩 생성
             for (int j = 0; j < PoolSizePerCharacter; j++)
             {
-                // 포톤 네트워크가 연결되어 있으면 PhotonNetwork.Instantiate 사용 (네트워크 동기화)
-                // 연결되어 있지 않으면 일반 Instantiate 사용
+                // 로딩 씬에서는 항상 일반 Instantiate 사용
+                // (네트워크 동기화는 실제 소환 시에만 처리)
+                // 이렇게 하면 씬 전환 시 PhotonView 동기화 문제를 방지할 수 있습니다.
                 GameObject characterInstance;
-                
+
                 // 생성 위치를 카메라 밖으로 설정 (보이지 않게)
                 Vector3 hiddenPosition = new Vector3(0, -1000, 0);
-                
-                if (PhotonNetwork.IsConnected && PhotonNetwork.InRoom)
-                {
-                    // PhotonNetwork.Instantiate 사용 (네트워크 동기화를 위해)
-                    string prefabPath = "PlayerCharacters/SPUM_" + prefabName; // Resources 폴더 기준 경로
-                    characterInstance = PhotonNetwork.Instantiate(
-                        prefabPath,
-                        hiddenPosition,
-                        Quaternion.identity,
-                        0,
-                        null
-                    );
-                }
-                else
-                {
-                    // 일반 Instantiate 사용 (네트워크 없을 때)
-                    characterInstance = Instantiate(characterPrefab, hiddenPosition, Quaternion.identity);
-                }
-                
+
+                // 일반 Instantiate 사용 (로딩 씬에서는 네트워크 동기화 없이 준비만)
+                characterInstance = Instantiate(characterPrefab, hiddenPosition, Quaternion.identity);
+
                 if (characterInstance == null)
                 {
                     Debug.LogError($"[PlayerCharacterGroup] '{prefabName}' 프리팹 생성 실패!");
                     continue;
                 }
-                
-                // 생성 직후 즉시 비활성화 (로딩 씬에서 보이지 않게)
-                characterInstance.SetActive(false);
-                
+
                 // 부모를 현재 클래스(PlayerCharacterGroup)로 설정
                 characterInstance.transform.SetParent(transform);
-                
+
                 characterInstance.name = $"{prefabName}_{j}"; // 이름 설정 (인덱스 포함)
-                
+
                 // PlayerCharacter 컴포넌트 가져오기
                 PlayerCharacter playerCharacter = characterInstance.GetComponent<PlayerCharacter>();
-                
+
                 if (playerCharacter == null)
                 {
                     Debug.LogWarning($"[PlayerCharacterGroup] '{prefabName}' 프리팹에 PlayerCharacter 컴포넌트가 없습니다!");
-                    if (PhotonNetwork.IsConnected)
-                    {
-                        PhotonNetwork.Destroy(characterInstance);
-                    }
-                    else
-                    {
-                        Destroy(characterInstance);
-                    }
+                    Destroy(characterInstance);
                     continue;
+                }
+
+                // PhotonView가 있으면 ViewID를 0으로 초기화 (아직 네트워크에 등록하지 않음)
+                PhotonView pv = characterInstance.GetComponent<PhotonView>();
+                if (pv != null)
+                {
+                    pv.ViewID = 0; // 나중에 실제 소환 시 네트워크에 등록
                 }
 
                 // 캐릭터 이름 설정
@@ -277,6 +243,9 @@ public class PlayerCharacterGroup : MonoBehaviour
 
                 // List에 추가
                 characterList.Add(playerCharacter);
+
+                // 캐릭터를 비활성화 상태로 설정 (위치 이동, Renderer/Collider 비활성화)
+                SetCharacterDespawned(playerCharacter);
             }
 
             Debug.Log($"[PlayerCharacterGroup] 캐릭터 프리팹 미리 생성: {characterName} x{PoolSizePerCharacter}개");
@@ -287,7 +256,7 @@ public class PlayerCharacterGroup : MonoBehaviour
         {
             totalCount += list.Count;
         }
-        
+
         isInitialized = true;
         Debug.Log($"[PlayerCharacterGroup] 초기화 완료: {Characters.Count}개 캐릭터 종류, 총 {totalCount}개 프리팹 생성됨");
     }
@@ -321,51 +290,86 @@ public class PlayerCharacterGroup : MonoBehaviour
             return null;
         }
 
-        // 비활성화된 캐릭터 찾기
+        // 네트워크 환경에서는 PhotonNetwork.Instantiate를 사용하여 모든 클라이언트에 오브젝트 생성
+        // 풀링 시스템은 로컬 참조용으로만 사용
         PlayerCharacter character = null;
-        foreach (PlayerCharacter charInList in characterList)
-        {
-            if (charInList != null && !charInList.gameObject.activeSelf)
-            {
-                character = charInList;
-                break;
-            }
-        }
-
-        // 사용 가능한 캐릭터가 없으면 경고
-        if (character == null)
-        {
-            Debug.LogWarning($"[PlayerCharacterGroup] '{characterName}' 캐릭터 풀이 모두 사용 중입니다! (풀 크기: {characterList.Count})");
-            return null;
-        }
-
-        // PhotonView 네트워크 등록 확인 및 처리
+        PhotonView characterPV = null;
+        
         if (PhotonNetwork.IsConnected && PhotonNetwork.InRoom)
         {
-            PhotonView characterPV = character.GetComponent<PhotonView>();
+            // PhotonNetwork.Instantiate를 사용하여 네트워크 오브젝트 생성
+            string prefabPath = "PlayerCharacters/SPUM_" + characterName.ToString();
+            Vector3 hiddenPosition = new Vector3(0, -1000, 0);
             
-            if (characterPV != null)
+            GameObject networkInstance = PhotonNetwork.Instantiate(
+                prefabPath,
+                hiddenPosition,
+                Quaternion.identity,
+                0,
+                null
+            );
+            
+            if (networkInstance == null)
             {
-                // PhotonView가 네트워크에 등록되지 않았다면 등록
-                if (characterPV.ViewID == 0)
+                Debug.LogError($"[PlayerCharacterGroup] PhotonNetwork.Instantiate 실패: {prefabPath}");
+                return null;
+            }
+            
+            character = networkInstance.GetComponent<PlayerCharacter>();
+            if (character == null)
+            {
+                Debug.LogError($"[PlayerCharacterGroup] 네트워크 오브젝트에 PlayerCharacter 컴포넌트가 없습니다!");
+                PhotonNetwork.Destroy(networkInstance);
+                return null;
+            }
+            
+            // 캐릭터 이름 설정
+            character.Name = characterName;
+            
+            // 부모를 PlayerCharacterGroup으로 설정
+            networkInstance.transform.SetParent(transform);
+            
+            // PhotonView 소유권 확인
+            characterPV = character.GetComponent<PhotonView>();
+            if (characterPV != null && !characterPV.IsMine)
+            {
+                characterPV.TransferOwnership(PhotonNetwork.LocalPlayer);
+            }
+            
+            Debug.Log($"[PlayerCharacterGroup] 네트워크 캐릭터 생성: {characterName} (ViewID: {characterPV?.ViewID})");
+        }
+        else
+        {
+            // 오프라인 모드: 풀에서 가져오기
+            foreach (PlayerCharacter charInList in characterList)
+            {
+                if (charInList != null && IsCharacterDespawned(charInList))
                 {
-                    // ViewID 할당 및 네트워크에 등록
-                    characterPV.ViewID = PhotonNetwork.AllocateViewID(PhotonNetwork.LocalPlayer.ActorNumber);
-                    PhotonNetwork.RegisterPhotonView(characterPV);
-                }
-                
-                // 네트워크에서 소유권 확인 (필요시)
-                if (PhotonNetwork.IsMasterClient && !characterPV.IsMine)
-                {
-                    // 마스터 클라이언트가 소유권을 가지도록 설정
-                    characterPV.TransferOwnership(PhotonNetwork.LocalPlayer);
+                    character = charInList;
+                    break;
                 }
             }
+            
+            if (character == null)
+            {
+                Debug.LogWarning($"[PlayerCharacterGroup] '{characterName}' 캐릭터 풀이 모두 사용 중입니다! (풀 크기: {characterList.Count})");
+                return null;
+            }
+            
+            // 오프라인 모드에서도 PhotonView 가져오기
+            characterPV = character.GetComponent<PhotonView>();
         }
 
-        // 캐릭터 활성화 (네트워크 동기화를 위해 RPC로 처리할 수도 있음)
-        character.gameObject.SetActive(true);
-        
+        // 캐릭터 활성화 (로컬에서 먼저 실행)
+        SetCharacterSpawned(character);
+
+        // 네트워크 동기화: 모든 클라이언트에 Renderer/Collider 활성화 전달
+        if (characterPV != null && characterPV.ViewID != 0 && characterPV.IsMine)
+        {
+            // 코루틴을 사용하여 PhotonView 등록이 완전히 완료된 후 RPC 호출
+            StartCoroutine(DelayedSpawnSync(characterPV));
+        }
+
         // 생존 캐릭터 수 증가
         CurrentAliveCharacterCount++;
 
@@ -403,33 +407,41 @@ public class PlayerCharacterGroup : MonoBehaviour
 
         List<PlayerCharacter> characterList = Characters[characterName];
 
-        // List에 해당 캐릭터가 있는지 확인
-        if (!characterList.Contains(character))
+        // PhotonNetwork.Instantiate로 생성된 네트워크 오브젝트인지 확인
+        PhotonView characterPV = character.GetComponent<PhotonView>();
+        bool isNetworkObject = characterPV != null && characterPV.ViewID != 0 && 
+                               PhotonNetwork.IsConnected && PhotonNetwork.InRoom;
+
+        // 네트워크 오브젝트인 경우 풀에 속하지 않을 수 있으므로 체크 생략
+        if (!isNetworkObject)
         {
-            Debug.LogWarning($"[PlayerCharacterGroup] '{characterName}' 캐릭터가 이 그룹에 속하지 않습니다!");
-            return;
+            // 풀 오브젝트인 경우에만 List에 속하는지 확인
+            if (!characterList.Contains(character))
+            {
+                Debug.LogWarning($"[PlayerCharacterGroup] '{characterName}' 캐릭터가 이 그룹에 속하지 않습니다!");
+                return;
+            }
         }
 
         // 이미 비활성화되어 있으면 그대로 반환
-        if (!character.gameObject.activeSelf)
+        if (IsCharacterDespawned(character))
         {
             Debug.LogWarning($"[PlayerCharacterGroup] '{characterName}' 캐릭터가 이미 비활성화되어 있습니다!");
             return;
         }
 
-        // PhotonView 처리 (네트워크 동기화)
-        if (PhotonNetwork.IsConnected && PhotonNetwork.InRoom)
+        // 네트워크 오브젝트인 경우 PhotonNetwork.Destroy로 제거
+        if (isNetworkObject && characterPV != null && characterPV.IsMine)
         {
-            PhotonView characterPV = character.GetComponent<PhotonView>();
-            
-            // PhotonView가 있다면 네트워크에서 비활성화 알림
-            // 주의: PhotonNetwork.Destroy를 사용하지 않음 (풀링을 위해)
-            // 대신 모든 클라이언트에서 SetActive(false)를 호출하도록 RPC 사용 가능
+            PhotonNetwork.Destroy(character.gameObject);
+            Debug.Log($"[PlayerCharacterGroup] 네트워크 캐릭터 제거: {characterName}");
+        }
+        else
+        {
+            // 풀 오브젝트인 경우 비활성화만 수행
+            SetCharacterDespawned(character);
         }
 
-        // 캐릭터 비활성화
-        character.gameObject.SetActive(false);
-        
         // 생존 캐릭터 수 감소
         CurrentAliveCharacterCount--;
         if (CurrentAliveCharacterCount < 0)
@@ -462,11 +474,11 @@ public class PlayerCharacterGroup : MonoBehaviour
 
         List<PlayerCharacter> characterList = Characters[characterName];
 
-        // 활성화된 캐릭터 찾기
+        // 활성화된 캐릭터 찾기 (Renderer가 활성화된 캐릭터)
         PlayerCharacter character = null;
         foreach (PlayerCharacter charInList in characterList)
         {
-            if (charInList != null && charInList.gameObject.activeSelf)
+            if (charInList != null && !IsCharacterDespawned(charInList))
             {
                 character = charInList;
                 break;
@@ -482,6 +494,140 @@ public class PlayerCharacterGroup : MonoBehaviour
 
         // 캐릭터 제거 (위의 DespawnCharacter 오버로드 사용)
         DespawnCharacter(character);
+    }
+
+    /// <summary>
+    /// 캐릭터가 비활성화 상태인지 확인 (Renderer가 비활성화되어 있는지)
+    /// </summary>
+    private bool IsCharacterDespawned(PlayerCharacter character)
+    {
+        if (character == null)
+            return true;
+
+        Renderer[] renderers = character.GetComponentsInChildren<Renderer>();
+        if (renderers != null && renderers.Length > 0)
+        {
+            // Renderer가 하나라도 비활성화되어 있으면 비활성화 상태로 간주
+            return !renderers[0].enabled;
+        }
+
+        // Renderer가 없으면 activeSelf로 판단
+        return !character.gameObject.activeSelf;
+    }
+
+    /// <summary>
+    /// 캐릭터를 활성화 상태로 설정 (Renderer/Collider 활성화)
+    /// </summary>
+    private void SetCharacterSpawned(PlayerCharacter character)
+    {
+        if (character == null)
+            return;
+
+        // GameObject 활성화 (항상 활성화 상태 유지)
+        character.gameObject.SetActive(true);
+
+        
+        if (character.Model != null)
+        {
+            character.Model.OverrideControllerInit();
+        }
+
+
+        // Renderer 활성화
+        Renderer[] renderers = character.GetComponentsInChildren<Renderer>();
+        foreach (var renderer in renderers)
+        {
+            if (renderer != null)
+            {
+                renderer.enabled = true;
+            }
+        }
+
+        // Collider 활성화
+        Collider[] colliders = character.GetComponentsInChildren<Collider>();
+        foreach (var collider in colliders)
+        {
+            if (collider != null)
+            {
+                collider.enabled = true;
+            }
+        }
+
+        // PlayerCharacter 컴포넌트 활성화
+        character.enabled = true;
+
+        // MirroringObject 초기화 확인
+        if (character.MirroringObject != null)
+        {
+            // 원본 위치가 초기화되지 않았다면 현재 위치로 설정
+            if (!character.MirroringObject.IsOriginalPositionInitialized())
+            {
+                character.MirroringObject.SetOriginalPosition(character.transform.position);
+            }
+
+            // 상대방 캐릭터인 경우 즉시 미러링 적용
+            if (character.MirroringObject.ShouldApplyMirroring())
+            {
+                character.MirroringObject.ApplyMirroringPosition();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 캐릭터를 비활성화 상태로 설정 (위치 이동, Renderer/Collider 비활성화)
+    /// </summary>
+    private void SetCharacterDespawned(PlayerCharacter character)
+    {
+        if (character == null)
+            return;
+
+        // 위치를 카메라 밖으로 이동
+        character.transform.position = new Vector3(0, -1000, 0);
+
+        // Renderer 비활성화 (렌더링 부하 감소)
+        Renderer[] renderers = character.GetComponentsInChildren<Renderer>();
+        foreach (var renderer in renderers)
+        {
+            if (renderer != null)
+            {
+                renderer.enabled = false;
+            }
+        }
+
+        // Collider 비활성화
+        Collider[] colliders = character.GetComponentsInChildren<Collider>();
+        foreach (var collider in colliders)
+        {
+            if (collider != null)
+            {
+                collider.enabled = false;
+            }
+        }
+
+        // PlayerCharacter 컴포넌트 비활성화 (로직 비활성화)
+        character.enabled = false;
+
+        // GameObject는 활성화 상태로 유지 (PhotonView 동기화를 위해)
+    }
+
+    /// <summary>
+    /// PhotonView 등록이 완료된 후 RPC 호출을 지연시키는 코루틴
+    /// </summary>
+    private IEnumerator DelayedSpawnSync(PhotonView pv)
+    {
+        // 한 프레임 대기하여 PhotonView 등록이 완전히 완료되도록 함
+        yield return null;
+        
+        // 다시 한 번 확인하여 안전하게 RPC 호출
+        if (pv != null && pv.ViewID != 0 && pv.IsMine && PhotonNetwork.IsConnected && PhotonNetwork.InRoom)
+        {
+            pv.RPC("SetCharacterSpawnedSync", RpcTarget.All);
+            Debug.Log($"[PlayerCharacterGroup] 캐릭터 소환 동기화 RPC 전송: ViewID={pv.ViewID}");
+        }
+        else
+        {
+            Debug.LogWarning($"[PlayerCharacterGroup] PhotonView가 준비되지 않아 동기화 RPC를 전송할 수 없습니다. ViewID={pv?.ViewID}, IsMine={pv?.IsMine}");
+        }
     }
 }
 

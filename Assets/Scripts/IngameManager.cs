@@ -10,8 +10,16 @@ public class IngameManager : MonoBehaviourPunCallbacks
 {
     public static IngameManager Instance { get; private set; }
 
-    public MonsterSpawner TopSpawner;
-    public MonsterSpawner DownSpawner;
+    [Header("Spawner Settings")]
+    [Tooltip("스포너 (하나만 사용)")]
+    public MonsterSpawner Spawner;
+
+    [Header("Mirror Settings")]
+    [Tooltip("미러링 기준 Y 좌표 (이 좌표를 기준으로 반전)")]
+    public float MirrorYOffset = 0f;
+    
+    [Tooltip("미러링 활성화 여부")]
+    public bool EnableMirroring = true;
 
     public UIGameFailed GameFailed;
 
@@ -44,27 +52,31 @@ public class IngameManager : MonoBehaviourPunCallbacks
 
     private bool timerStarted = false;
 
-    /// <summary>
-    /// 현재 클라이언트의 스포너 인덱스 (1 = 위쪽, 2 = 아래쪽)
-    /// 항상 아래쪽(2)이 내 것입니다.
-    /// </summary>
-    public int MySpawnerIndex { get; private set; } = 2;
-    
-    /// <summary>
-    /// 내 클라이언트가 아래쪽 스포너를 사용하는지 (항상 true)
-    /// 에디터에서 확인 가능합니다.
-    /// </summary>
-    [SerializeField]
-    private bool isBottomSpawner = true;
-
     private bool isGameFailed = false; // 게임 실패 플래그 추가
 
     public PhotonView PV;
 
     /// <summary>
-    /// 내 클라이언트가 아래쪽 스포너를 사용하는지 (항상 true)
+    /// 현재 클라이언트가 상대방인지 확인 (ActorNumber가 더 큰 플레이어가 상대방, 미러링 적용)
     /// </summary>
-    public bool IsBottomSpawner => MySpawnerIndex == 2;
+    public bool ShouldMirror
+    {
+        get
+        {
+            if (!PhotonNetwork.IsConnected || PhotonNetwork.CurrentRoom == null || PhotonNetwork.PlayerList.Length < 2)
+                return false;
+            
+            // ActorNumber가 더 큰 플레이어가 상대방 (미러링 적용)
+            int myActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
+            foreach (Player player in PhotonNetwork.PlayerList)
+            {
+                if (player != PhotonNetwork.LocalPlayer && player.ActorNumber > myActorNumber)
+                    return true;
+            }
+            
+            return false;
+        }
+    }
     
     void Awake()
     {
@@ -174,19 +186,14 @@ public class IngameManager : MonoBehaviourPunCallbacks
         }
 
         
-        Debug.Log($"[IngameManager] 라운드 {RoundCount} 시작! 양쪽 스포너 시작");
+        Debug.Log($"[IngameManager] 라운드 {RoundCount} 시작! 스포너 시작");
 
         UpdateRoundUI();
         
-        // 양쪽 스포너 시작 (각 스포너가 자신의 소유권을 확인하여 시작)
-        if (TopSpawner != null)
+        // 스포너 시작
+        if (Spawner != null)
         {
-            TopSpawner.RequestStartRound();
-        }
-        
-        if (DownSpawner != null)
-        {
-            DownSpawner.RequestStartRound();
+            Spawner.RequestStartRound();
         }
     }
     
@@ -230,30 +237,44 @@ public class IngameManager : MonoBehaviourPunCallbacks
         }
     }
     
-    void OnValidate()
+    /// <summary>
+    /// 위치를 미러링합니다 (Y축 기준 반전)
+    /// </summary>
+    public Vector3 MirrorPosition(Vector3 position)
     {
-        // 에디터에서 자동으로 업데이트
-        isBottomSpawner = MySpawnerIndex == 2;
+        if (!EnableMirroring)
+            return position;
+            
+        // Y축 기준으로 반전 (MirrorYOffset 기준)
+        float mirroredY = MirrorYOffset - (position.y - MirrorYOffset);
+        return new Vector3(position.x, mirroredY, position.z);
     }
     
     /// <summary>
-    /// 몬스터가 현재 클라이언트에 속하는지 확인합니다.
+    /// 배열의 위치들을 미러링합니다
+    /// </summary>
+    public Vector3[] MirrorPositions(Vector3[] positions)
+    {
+        if (!EnableMirroring || positions == null)
+            return positions;
+            
+        Vector3[] mirrored = new Vector3[positions.Length];
+        for (int i = 0; i < positions.Length; i++)
+        {
+            mirrored[i] = MirrorPosition(positions[i]);
+        }
+        return mirrored;
+    }
+    
+    /// <summary>
+    /// 몬스터가 현재 클라이언트에 속하는지 확인합니다 (PV.IsMine으로 확인)
     /// </summary>
     public bool IsMyMonster(Monster monster)
     {
-        if (monster == null)
+        if (monster == null || monster.PV == null)
             return false;
             
-        // 아래쪽 스포너(인덱스 2)의 몬스터만 내꺼
-        return monster.SpanwerIndex == 2;
-    }
-    
-    /// <summary>
-    /// 스포너 인덱스로 몬스터가 현재 클라이언트에 속하는지 확인합니다.
-    /// </summary>
-    public bool IsMyMonster(int spawnerIndex)
-    {
-        return spawnerIndex == 2;
+        return monster.PV.IsMine;
     }
 
 /// <summary>

@@ -802,6 +802,7 @@ GameObject:
   - component: {fileID: -3098862759818588335}
   - component: {fileID: -3646294863709961496}
   - component: {fileID: -18887227588256650}
+  - component: {fileID: 895037384150835002}
   m_Layer: 0
   m_Name: SPUM_DemonApprenticeMage
   m_TagString: Untagged
@@ -3820,9 +3821,10 @@ MonoBehaviour:
   AttackAnimationSpeed: 2
   MoveSpeed: 5
   ReachedDistance: 0.1
-  AttackSystem: {fileID: 0}
+  AttackSystem: {fileID: -18887227588256650}
   Model: {fileID: 4968580742226771353}
-  PV: {fileID: 0}
+  PV: {fileID: -3646294863709961496}
+  MirroringObject: {fileID: 895037384150835002}
   ChangeMaterials:
   - {fileID: 7607687997988014043}
   - {fileID: 5382255471723901914}
@@ -3869,6 +3871,18 @@ MonoBehaviour:
   PlayerCharacter: {fileID: -3098862759818588335}
   Model: {fileID: 4968580742226771353}
   PV: {fileID: -3646294863709961496}
+--- !u!114 &895037384150835002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1532218796454169711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject
 --- !u!1 &1694226004405638191
 GameObject:
   m_ObjectHideFlags: 0

@@ -35,15 +35,63 @@ public class SPUM_Prefabs : MonoBehaviour
     public List<AnimationClip> DEATH_List = new();
     public List<AnimationClip> OTHER_List = new();
 
-
+ private RuntimeAnimatorController originalController; // 원본 컨트롤러 저장
+    
     public void OverrideControllerInit()
     {
         Animator animator = _anim;
+        
+        // Animator가 없으면 리턴
+        if (animator == null)
+        {
+            Debug.LogWarning("[SPUM_Prefabs] Animator가 없습니다.");
+            return;
+        }
+        
+        // 이미 OverrideController가 설정되어 있고 StateAnimationPairs가 초기화되어 있으면 리턴
+        if (OverrideController != null && StateAnimationPairs != null && StateAnimationPairs.Count > 0)
+        {
+            // 이미 초기화되었으므로 리턴
+            return;
+        }
+        
+        // 원본 컨트롤러 가져오기
+        RuntimeAnimatorController baseController = animator.runtimeAnimatorController;
+        
+        // 이미 AnimatorOverrideController인 경우 원본을 찾기
+        if (baseController is AnimatorOverrideController overrideController)
+        {
+            // 원본 컨트롤러가 저장되어 있으면 사용
+            if (originalController != null)
+            {
+                baseController = originalController;
+            }
+            else
+            {
+                // 원본 컨트롤러 가져오기
+                baseController = overrideController.runtimeAnimatorController;
+            }
+        }
+        
+        // 원본 컨트롤러가 없으면 리턴
+        if (baseController == null)
+        {
+            Debug.LogWarning("[SPUM_Prefabs] 원본 AnimatorController를 찾을 수 없습니다.");
+            return;
+        }
+        
+        // 원본 컨트롤러 저장
+        if (originalController == null)
+        {
+            originalController = baseController;
+        }
+        
+        // OverrideController 생성
         OverrideController = new AnimatorOverrideController();
-        OverrideController.runtimeAnimatorController= animator.runtimeAnimatorController;
+        OverrideController.runtimeAnimatorController = baseController;
 
         // 모든 애니메이션 클립을 가져옵니다
-        AnimationClip[] clips = animator.runtimeAnimatorController.animationClips;
+        AnimationClip[] clips = baseController.animationClips;
 
         foreach (AnimationClip clip in clips)
         {
@@ -51,11 +99,22 @@ public class SPUM_Prefabs : MonoBehaviour
             OverrideController[clip.name] = clip;
         }
 
-        animator.runtimeAnimatorController= OverrideController;
+        animator.runtimeAnimatorController = OverrideController;
+        
+        // StateAnimationPairs 초기화
+        if (StateAnimationPairs == null)
+        {
+            StateAnimationPairs = new Dictionary<string, List<AnimationClip>>();
+        }
+        
         foreach (PlayerState state in Enum.GetValues(typeof(PlayerState)))
         {
             var stateText = state.ToString();
-            StateAnimationPairs[stateText] = new List<AnimationClip>();
+            if (!StateAnimationPairs.ContainsKey(stateText))
+            {
+                StateAnimationPairs[stateText] = new List<AnimationClip>();
+            }
+            
             switch (stateText)
             {
                 case "IDLE":
@@ -82,6 +141,7 @@ public class SPUM_Prefabs : MonoBehaviour
             }
         }
     }
+
     public bool allListsHaveItemsExist(){
         List<List<AnimationClip>> allLists = new List<List<AnimationClip>>()
         {
@@ -156,41 +216,72 @@ public class SPUM_Prefabs : MonoBehaviour
         }
     
     }
-    public void PlayAnimation(PlayerState PlayState, int index){
-        Animator animator = _anim;
-        //Debug.Log(PlayState.ToString());
-        var animations =  StateAnimationPairs[PlayState.ToString()];
-        //Debug.Log(OverrideController[PlayState.ToString()].name);
-        OverrideController[PlayState.ToString()] = animations[index];
-        //Debug.Log( OverrideController[PlayState.ToString()].name);
-        var StateStr = PlayState.ToString();
-   
-        bool isMove = StateStr.Contains("MOVE");
-        bool isDebuff = StateStr.Contains("DEBUFF");
-        bool isDeath = StateStr.Contains("DEATH");
-        animator.SetBool("1_Move", isMove);
-        animator.SetBool("5_Debuff", isDebuff);
-        animator.SetBool("isDeath", isDeath);
-        if(!isMove && !isDebuff)
+  public void PlayAnimation(PlayerState PlayState, int index){
+    Animator animator = _anim;
+    
+    // StateAnimationPairs가 초기화되지 않았으면 초기화
+    if (StateAnimationPairs == null || StateAnimationPairs.Count == 0)
+    {
+        OverrideControllerInit();
+    }
+    
+    var stateKey = PlayState.ToString();
+    
+    // 딕셔너리에 키가 있는지 확인
+    if (!StateAnimationPairs.ContainsKey(stateKey))
+    {
+        Debug.LogWarning($"[SPUM_Prefabs] StateAnimationPairs에 '{stateKey}' 키가 없습니다. 초기화를 시도합니다.");
+        OverrideControllerInit();
+        
+        // 다시 확인
+        if (!StateAnimationPairs.ContainsKey(stateKey))
         {
-            AnimatorControllerParameter[] parameters = animator.parameters;
-            foreach (AnimatorControllerParameter parameter in parameters)
+            Debug.LogError($"[SPUM_Prefabs] '{stateKey}' 상태의 애니메이션을 찾을 수 없습니다.");
+            return;
+        }
+    }
+    
+    var animations = StateAnimationPairs[stateKey];
+    
+    // 인덱스 범위 확인
+    if (index < 0 || index >= animations.Count)
+    {
+        Debug.LogWarning($"[SPUM_Prefabs] '{stateKey}' 상태의 애니메이션 인덱스 {index}가 범위를 벗어났습니다. (Count: {animations.Count})");
+        return;
+    }
+    
+    //Debug.Log(OverrideController[PlayState.ToString()].name);
+    OverrideController[stateKey] = animations[index];
+    //Debug.Log( OverrideController[PlayState.ToString()].name);
+    var StateStr = PlayState.ToString();
+
+    bool isMove = StateStr.Contains("MOVE");
+    bool isDebuff = StateStr.Contains("DEBUFF");
+    bool isDeath = StateStr.Contains("DEATH");
+    animator.SetBool("1_Move", isMove);
+    animator.SetBool("5_Debuff", isDebuff);
+    animator.SetBool("isDeath", isDeath);
+    if(!isMove && !isDebuff)
+    {
+        AnimatorControllerParameter[] parameters = animator.parameters;
+        foreach (AnimatorControllerParameter parameter in parameters)
+        {
+            // if(parameter.type == AnimatorControllerParameterType.Bool){
+            //     bool isBool = StateStr.ToUpper().Contains(parameter.name.ToUpper());
+            //     animator.SetBool(parameter.name, isBool);
+            // }
+            if(parameter.type == AnimatorControllerParameterType.Trigger)
             {
-                // if(parameter.type == AnimatorControllerParameterType.Bool){
-                //     bool isBool = StateStr.ToUpper().Contains(parameter.name.ToUpper());
-                //     animator.SetBool(parameter.name, isBool);
-                // }
-                if(parameter.type == AnimatorControllerParameterType.Trigger)
-                {
-                    bool isTrigger = parameter.name.ToUpper().Contains(StateStr.ToUpper());
-                    if(isTrigger){
-                         Debug.Log($"Parameter: {parameter.name}, Type: {parameter.type}");
-                        animator.SetTrigger(parameter.name);
-                    }
+                bool isTrigger = parameter.name.ToUpper().Contains(StateStr.ToUpper());
+                if(isTrigger){
+                     Debug.Log($"Parameter: {parameter.name}, Type: {parameter.type}");
+                    animator.SetTrigger(parameter.name);
                 }
             }
         }
     }
+}
+
     AnimationClip LoadAnimationClip(string clipPath)
     {
         // "Animations" 폴더에서 애니메이션 클립 로드

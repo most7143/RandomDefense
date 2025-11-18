@@ -4238,6 +4238,7 @@ GameObject:
   - component: {fileID: 3325150565544052913}
   - component: {fileID: -2208605767578604028}
   - component: {fileID: -1534719045775566446}
+  - component: {fileID: -5509246794172110572}
   m_Layer: 5
   m_Name: SPUM_Shieldman
   m_TagString: Untagged
@@ -7296,9 +7297,10 @@ MonoBehaviour:
   AttackAnimationSpeed: 2
   MoveSpeed: 5
   ReachedDistance: 0.1
-  AttackSystem: {fileID: 0}
+  AttackSystem: {fileID: -1534719045775566446}
   Model: {fileID: 6475727885721708963}
-  PV: {fileID: 0}
+  PV: {fileID: -2208605767578604028}
+  MirroringObject: {fileID: -5509246794172110572}
   ChangeMaterials:
   - {fileID: 1732612542932811083}
   - {fileID: 957297944351744398}
@@ -7349,6 +7351,18 @@ MonoBehaviour:
   PlayerCharacter: {fileID: 3325150565544052913}
   Model: {fileID: 6475727885721708963}
   PV: {fileID: -2208605767578604028}
+--- !u!114 &-5509246794172110572
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8215520666455406396}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject
 --- !u!1 &8220850203522784723
 GameObject:
   m_ObjectHideFlags: 0

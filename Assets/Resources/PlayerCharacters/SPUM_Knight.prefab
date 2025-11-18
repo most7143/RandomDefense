@@ -1349,6 +1349,7 @@ GameObject:
   - component: {fileID: -6960937129557153536}
   - component: {fileID: -8087596036558405505}
   - component: {fileID: -6572803270425743411}
+  - component: {fileID: 5381507758387147318}
   m_Layer: 5
   m_Name: SPUM_Knight
   m_TagString: Untagged
@@ -4397,9 +4398,10 @@ MonoBehaviour:
   AttackAnimationSpeed: 2
   MoveSpeed: 5
   ReachedDistance: 0.1
-  AttackSystem: {fileID: 0}
+  AttackSystem: {fileID: -6572803270425743411}
   Model: {fileID: 3611804698667321785}
-  PV: {fileID: 0}
+  PV: {fileID: -8087596036558405505}
+  MirroringObject: {fileID: 5381507758387147318}
   ChangeMaterials:
   - {fileID: 4407989308236558382}
   - {fileID: 3774382711914510683}
@@ -4449,6 +4451,18 @@ MonoBehaviour:
   PlayerCharacter: {fileID: -6960937129557153536}
   Model: {fileID: 3611804698667321785}
   PV: {fileID: -8087596036558405505}
+--- !u!114 &5381507758387147318
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3222167648754355912}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ece213b6a4b6d64f8c81d25a6847193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MirroringObject
 --- !u!1 &3282349675828596777
 GameObject:
   m_ObjectHideFlags: 0

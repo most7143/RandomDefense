@@ -6,8 +6,6 @@ public class Monster : MonoBehaviourPunCallbacks
 {
     public MonsterNames Name;
 
-    public int SpanwerIndex = 0;
-
     public int Level;
     public float HP;
     public float MaxHP; // 최대 체력 저장
@@ -23,7 +21,7 @@ public class Monster : MonoBehaviourPunCallbacks
     private const float reachedDistance = 0.1f;
     
     private Vector3[] movePointPositions;
-    private bool positionAdjusted = false; // 위치 조정 여부
+    public MirroringObject MirroringObject; // 미러링 기능 담당 클래스
 
     void Awake()
     {
@@ -31,19 +29,7 @@ public class Monster : MonoBehaviourPunCallbacks
         PV = GetComponent<PhotonView>();
     }
 
-    /// <summary>
-    /// Photon이 오브젝트를 인스턴스화한 직후 호출 (매우 빠른 타이밍)
-    /// </summary>
-    public void OnPhotonInstantiate(PhotonMessageInfo info)
-    {
-        // PhotonView가 있고 상대 클라이언트의 몬스터인 경우 즉시 위쪽으로 이동
-        if (PV != null && !PV.IsMine && IngameManager.Instance != null)
-        {
-            AdjustPositionForOpponent();
-        }
-    }
-
-    void Start()
+   void Start()
     {
        // 최대 체력 저장 (초기 체력을 최대 체력으로 설정)
         if (MaxHP <= 0)
@@ -56,59 +42,11 @@ public class Monster : MonoBehaviourPunCallbacks
         {
             HPBar.SetActive(false);
         }
-
-        // OnPhotonInstantiate가 호출되지 않은 경우를 대비한 백업
-        if (!positionAdjusted && PV != null && !PV.IsMine && IngameManager.Instance != null)
+        
+        // MirroringObject가 이미 Awake에서 처리했지만, Start에서도 확인
+        if (MirroringObject != null && !MirroringObject.IsOriginalPositionInitialized())
         {
-            AdjustPositionForOpponent();
-        }
-    }
-
-    /// <summary>
-    /// 상대 클라이언트의 몬스터를 위쪽 스포너 위치로 이동하고 MovePoints 갱신
-    /// </summary>
-    private void AdjustPositionForOpponent()
-    {
-        if (positionAdjusted || IngameManager.Instance == null)
-            return;
-
-        // IngameManager의 캐싱된 위쪽 스포너 사용
-        if (IngameManager.Instance.TopSpawner != null)
-        {
-            MonsterSpawner topSpawner = IngameManager.Instance.TopSpawner;
-            
-            // 위치 변경
-            transform.position = topSpawner.transform.position;
-            SpanwerIndex = 1; // 위쪽으로 표시
-            positionAdjusted = true;
-            
-            // 위쪽 스포너의 MovePoints로 갱신
-            if (topSpawner.MovePoints != null && topSpawner.MovePoints.Length > 0)
-            {
-                // Transform 배열을 Vector3 배열로 변환
-                Vector3[] newMovePointPositions = new Vector3[topSpawner.MovePoints.Length];
-                for (int i = 0; i < topSpawner.MovePoints.Length; i++)
-                {
-                    if (topSpawner.MovePoints[i] != null)
-                    {
-                        newMovePointPositions[i] = topSpawner.MovePoints[i].position;
-                    }
-                }
-                
-                // MovePoints 갱신 (즉시 처리)
-                movePointPositions = newMovePointPositions;
-                if (newMovePointPositions != null && newMovePointPositions.Length > 0)
-                {
-                    transform.position = newMovePointPositions[0];
-                    currentTargetIndex = 1 % newMovePointPositions.Length;
-                }
-                
-                Debug.Log($"[Monster] 상대 몬스터를 위쪽 스포너로 즉시 이동 및 MovePoints 갱신: {newMovePointPositions.Length}개 포인트");
-            }
-            else
-            {
-                Debug.LogWarning($"[Monster] 위쪽 스포너의 MovePoints가 없습니다!");
-            }
+            MirroringObject.SetOriginalPosition(transform.position);
         }
     }
 
@@ -117,55 +55,103 @@ public class Monster : MonoBehaviourPunCallbacks
         if (movePointPositions == null || movePointPositions.Length == 0)
             return;
 
-        // 모든 클라이언트에서 동일한 이동 로직 실행 (동기화 불필요)
+        // 모든 클라이언트에서 동일한 이동 로직 실행 (미러링 적용)
         HandleMovement();
+        
+        // 미러링 적용 (상대방 몬스터인 경우)
+        if (MirroringObject != null)
+        {
+            MirroringObject.ApplyMirroring();
+        }
     }
 
-    private void HandleMovement()
+   private void HandleMovement()
     {
-
-
-        
         if (currentTargetIndex >= movePointPositions.Length)
         {
             currentTargetIndex = 0;
             return;
         }
 
-        Vector3 targetPoint = movePointPositions[currentTargetIndex];
-        Vector3 direction = targetPoint - transform.position;
+        // 원본 좌표계에서 이동 계산 (모든 클라이언트에서 동일)
+        Vector3 originalPosition = MirroringObject != null ? MirroringObject.GetOriginalPosition() : transform.position;
+        Vector3 originalTargetPoint = movePointPositions[currentTargetIndex];
+        Vector3 direction = originalTargetPoint - originalPosition;
 
-        // 이동 (FixedUpdate이므로 Time.fixedDeltaTime 사용)
-        transform.position += direction.normalized * MoveSpeed * Time.fixedDeltaTime;
+        // 원본 좌표계에서 이동
+        originalPosition += direction.normalized * MoveSpeed * Time.fixedDeltaTime;
+        
+        // MirroringObject에 원본 위치 업데이트
+        if (MirroringObject != null)
+        {
+            MirroringObject.UpdateOriginalPosition(originalPosition);
+        }
+        
+        // 내 몬스터면 실제 위치 설정, 상대방은 미러링 적용 (ApplyMirroring에서)
+        if (PV != null && PV.IsMine)
+        {
+            transform.position = originalPosition;
+        }
 
-        Filp(direction.x);
 
+         Filp(direction.x);
+
+ 
         // 목표 지점 도달 체크
         if (direction.magnitude <= reachedDistance)
         {
             currentTargetIndex = (currentTargetIndex + 1) % movePointPositions.Length;
         }
     }
-
+    
     private void Filp(float x)
     {
+        // MirroringObject를 사용하지 않는 경우를 위한 폴백
         if (SpriteRenderer != null && Mathf.Abs(x) > 0.001f)
         {
-            SpriteRenderer.flipX = x < 0f;   // 왼쪽 이동 시 flip
+            SpriteRenderer.flipX = x < 0f;
         }
     }
-
-    [PunRPC]
+ [PunRPC]
     public void SetMovePoints(Vector3[] positions)
     {
+        if (positions == null || positions.Length == 0)
+            return;
+            
+        // 원본 MovePoints 저장 (모든 클라이언트에서 동일한 원본 좌표 사용)
         movePointPositions = positions;
-        if (positions != null && positions.Length > 0)
+        
+        // MirroringObject를 통해 위치 설정
+        if (MirroringObject != null)
         {
-            transform.position = positions[0];
-            currentTargetIndex = 1 % positions.Length;
+            // originalPosition이 아직 설정되지 않았다면 현재 위치로 설정
+            if (!MirroringObject.IsOriginalPositionInitialized())
+            {
+                MirroringObject.SetOriginalPosition(transform.position);
+            }
+            
+            // 미러링 여부에 따라 위치 적용
+            Vector3 originalPos = MirroringObject.GetOriginalPosition();
+            if (MirroringObject.ShouldApplyMirroring())
+            {
+                MirroringObject.ApplyMirroringPosition();
+            }
+            else
+            {
+                MirroringObject.ApplyOriginalPosition();
+            }
         }
+        else
+        {
+            // MirroringObject가 없는 경우 폴백
+            if (PV != null && !PV.IsMine && IngameManager.Instance != null && IngameManager.Instance.EnableMirroring)
+            {
+                transform.position = IngameManager.Instance.MirrorPosition(transform.position);
+            }
+        }
+        
+        currentTargetIndex = 1 % positions.Length;
     }
-
     /// <summary>
     /// 데미지를 받는 RPC 메서드
     /// </summary>
@@ -223,32 +209,19 @@ public class Monster : MonoBehaviourPunCallbacks
     /// </summary>
     private void DecreaseSpawnerCount()
     {
-        if (IngameManager.Instance == null)
+        if (IngameManager.Instance == null || IngameManager.Instance.Spawner == null)
             return;
 
-        // SpanwerIndex로 해당 스포너 찾기
-        MonsterSpawner spawner = null;
-        if (SpanwerIndex == 1)
-        {
-            spawner = IngameManager.Instance.TopSpawner;
-        }
-        else if (SpanwerIndex == 2)
-        {
-            spawner = IngameManager.Instance.DownSpawner;
-        }
+        MonsterSpawner spawner = IngameManager.Instance.Spawner;
 
-        // 스포너를 찾았고 카운터가 0보다 크면 감소
-        if (spawner != null && spawner.AliveMonsterCount > 0)
+        // 내 몬스터인 경우에만 카운터 감소
+        if (PV != null && PV.IsMine && spawner.AliveMonsterCount > 0)
         {
             spawner.AliveMonsterCount--;
-            Debug.Log($"[Monster] 스포너 {SpanwerIndex}의 생존 몬스터 수 감소: {spawner.AliveMonsterCount}");
+            Debug.Log($"[Monster] 생존 몬스터 수 감소: {spawner.AliveMonsterCount}");
             
-            // 내 스포너의 몬스터가 죽었을 때만 UI 갱신
-            if (IngameManager.Instance.IsMyMonster(this) && IngameManager.Instance.DownSpawner != null)
-            {
-                int myMonsterCount = IngameManager.Instance.DownSpawner.AliveMonsterCount;
-                IngameManager.Instance.UpdateMonsterCountUI(myMonsterCount);
-            }
+            // UI 갱신
+            IngameManager.Instance.UpdateMonsterCountUI(spawner.AliveMonsterCount);
         }
     }
 }
