@@ -1,7 +1,7 @@
 using UnityEngine;
 using Photon.Pun;
-using Photon.Realtime;
 using System.Collections;
+using System;
 
 public class MonsterSpawner : MonoBehaviourPunCallbacks
 {
@@ -9,15 +9,14 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
     [Tooltip("스폰할 몬스터 타입 (Resources 폴더에서 프리팹을 로드합니다)")]
     public MonsterNames MonsterType = MonsterNames.Bird1;
 
-    public int AliveMonsterCount = 0;
-
     [Header("Spawn Timing")]
     [Tooltip("몬스터 간 스폰 간격 (초)")]
     public float spawnInterval = 0.3f;
 
-    private int currentRound = 1;
     private bool isSpawning = false;
-    private int monstersSpawnedCount = 0;
+
+    public event Action<Monster> OnMonsterSpawned;
+
 
     [Header("Move Points")]
     [Tooltip("몬스터 이동 경로 포인트들")]
@@ -44,69 +43,30 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         }
     }
 
-    IEnumerator StartRound(int round)
+    IEnumerator StartRound(Round round)
     {
         if (isSpawning)
             yield break;
 
-        // PhotonNetwork가 연결되지 않았으면 스폰하지 않음
-        if (!PhotonNetwork.IsConnected)
-            yield break;
-
         isSpawning = true;
 
-
-        // 해당 라운드의 몬스터 수 가져오기
-        int monstersToSpawn = 40;
-
-        Debug.Log($"[스포너] 라운드 {round} 시작: {monstersToSpawn}마리 스폰 예정 (클라이언트: {PhotonNetwork.LocalPlayer.ActorNumber})");
-
-        // 몬스터 스폰
-        for (int i = 0; i < monstersToSpawn; i++)
+        while (round.CanSpawn)
         {
-            // PhotonNetwork 연결 확인
-            if (!PhotonNetwork.IsConnected)
+            Monster monster = SpawnMonster();
+            round.OnMonsterSpawned();
+            monster.OnDead += () =>
             {
-                break;
-            }
+                round.OnMonsterDefeated();
+            };
+            OnMonsterSpawned?.Invoke(monster);
 
-            if (monstersSpawnedCount >= IngameManager.Instance.MaxMonsterCount)
-            {
-                if (IngameManager.Instance != null)
-                {
-                    IngameManager.Instance.RequestGameFailed();
-                }
-                
-                break;
-            }
-
-
-            SpawnMonster();
-
-            monstersSpawnedCount++;
-
-            IngameManager.Instance.UpdateMonsterCountUI(monstersSpawnedCount);
-
-
-            // 다음 스폰까지 대기
             yield return new WaitForSeconds(spawnInterval);
         }
 
         isSpawning = false;
-
-
-        // 전체 몬스터 수로 체크
-        if (monstersSpawnedCount >= IngameManager.Instance.MaxMonsterCount)
-        {
-            Debug.Log($"[스포너] 라운드 종료 최대 마리수 도달 (클라이언트: {PhotonNetwork.LocalPlayer.ActorNumber})");
-        }
-        else
-        {
-            Debug.Log($"[스포너] 라운드 {round} 완료: {monstersSpawnedCount}마리 스폰됨 (클라이언트: {PhotonNetwork.LocalPlayer.ActorNumber})");
-        }
     }
 
-    void SpawnMonster()
+    Monster SpawnMonster()
     {
         // MonsterNames를 문자열로 변환하여 프리팹 이름 생성
         string prefabName = MonsterType.ToString();
@@ -117,7 +77,7 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         if (monsterPrefab == null)
         {
             Debug.LogError($"MonsterSpawner: Resources 폴더에서 '{prefabName}' 프리팹을 찾을 수 없습니다!");
-            return;
+            return null;
         }
 
         // 스폰 포인트 선택
@@ -135,6 +95,8 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         {
             Monster monsterComponent = monster.GetComponent<Monster>();
             PhotonView monsterPV = monster.GetComponent<PhotonView>();
+            OnMonsterSpawned?.Invoke(monsterComponent);
+
 
             // 생성된 몬스터에 MovePoints 전달 (RPC 사용, 미러링 적용)
             if (monsterPV != null && MovePoints != null && MovePoints.Length > 0)
@@ -155,12 +117,10 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
 
             Debug.Log($"[스포너] 몬스터 스폰됨: {monster.name} at {spawnPosition} (소유자: {PhotonNetwork.LocalPlayer.ActorNumber})");
 
-            // 내가 소유한 몬스터만 카운트
-            if (monsterPV != null && monsterPV.IsMine)
-            {
-                AliveMonsterCount++;
-            }
+            return monsterComponent;
         }
+
+        return null;
     }
 
 
@@ -172,29 +132,16 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
     /// 외부에서 라운드 시작을 요청할 수 있는 메서드 (IngameManager에서 호출)
     /// 각 클라이언트가 자신의 몬스터를 스폰합니다.
     /// </summary>
-    public void RequestStartRound()
+    public void RequestStartRound(Round round)
     {
         // PhotonNetwork가 연결되어 있고, 아직 스폰 중이 아니면 시작
         if (PhotonNetwork.IsConnected && !isSpawning)
         {
-            StartCoroutine(StartRound(currentRound));
+            StartCoroutine(StartRound(round));
         }
         else
         {
             Debug.Log($"[스포너] 스폰 요청 무시 (연결: {PhotonNetwork.IsConnected}, isSpawning: {isSpawning})");
         }
     }
-
-    // 현재 라운드 정보
-    public int GetCurrentRound()
-    {
-        return currentRound;
-    }
-
-    public bool IsSpawning()
-    {
-        return isSpawning;
-    }
-
-
 }
