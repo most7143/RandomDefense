@@ -28,6 +28,8 @@ public class IngameManager : MonoBehaviourPunCallbacks
 
     public UIRound RoundUI;
 
+    public ClientRoundContext roundContext;
+
     private bool isGameFailed = false;
 
     public PhotonView PV;
@@ -71,15 +73,21 @@ public class IngameManager : MonoBehaviourPunCallbacks
     void Start()
     {
         round = new Round();
-        Debug.Log(RoundUI);
-        round.Timer.OnTick += RoundUI.SetTime;
+        roundContext = new ClientRoundContext();
+        round.OnRoundEnded += roundContext.ResetForNewRound;
         round.OnRoundEnded += StartGame;
-        round.OnRoundEnded += RoundUI.SetRound;
 
         Spawner.OnMonsterSpawned += OnMonsterSpawned;
+        round.OnRoundFailed += RequestGameFailed;
+        SetRoundUIInitial();
+    }
 
-        round.MonsterCounter.OnCountChanged += count =>
-        RoundUI.SetMonsterCount(count, round.MonsterCounter.MaxCount);
+    private void SetRoundUIInitial()
+    {
+        round.Timer.OnTick += RoundUI.SetTime;
+        round.OnRoundEnded += RoundUI.SetRound;
+        roundContext.OnAliveMonsterCountChanged += count =>
+        RoundUI.SetMonsterCount(count, round.MaxSpawnCount);
     }
 
     void Update()
@@ -119,20 +127,20 @@ public class IngameManager : MonoBehaviourPunCallbacks
 
     private void StartGame(int roundNumber)
     {
-
-        if (Spawner != null)
+        roundContext.OnLocalRoundCleared += () =>
         {
-            Spawner.RequestStartRound(round);
-        }
+            Debug.Log("내 클라이언트 기준 라운드 클리어");
+        };
+
+        Spawner.RequestStartRound(round, roundContext);
+
     }
 
     private void OnMonsterSpawned(Monster monster)
     {
-        round.MonsterCounter.OnMonsterSpawned();
-
         monster.OnDead += () =>
         {
-            round.MonsterCounter.OnMonsterDefeated();
+            roundContext.OnMonsterDead();
         };
     }
 

@@ -43,22 +43,38 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         }
     }
 
-    IEnumerator StartRound(Round round)
+    IEnumerator StartRound(Round round, ClientRoundContext context)
     {
         if (isSpawning)
             yield break;
 
+
+
         isSpawning = true;
 
-        while (round.CanSpawn)
+        while (context.TryConsumeSpawn())
         {
             Monster monster = SpawnMonster();
-            round.OnMonsterSpawned();
-            monster.OnDead += () =>
+
+            if (monster.TryGetComponent(out PhotonView monsterPV))
             {
-                round.OnMonsterDefeated();
-            };
+                if (monsterPV.IsMine)
+                {
+                    context.OnMonsterSpawned();
+                    monster.OnDead += () =>
+                    {
+                        context.OnMonsterDead();
+                    };
+                }
+            }
+
             OnMonsterSpawned?.Invoke(monster);
+
+            if (round.MaxSpawnCount == context.AliveMonsterCount)
+            {
+                round.FailRound();
+                break;
+            }
 
             yield return new WaitForSeconds(spawnInterval);
         }
@@ -132,12 +148,12 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
     /// 외부에서 라운드 시작을 요청할 수 있는 메서드 (IngameManager에서 호출)
     /// 각 클라이언트가 자신의 몬스터를 스폰합니다.
     /// </summary>
-    public void RequestStartRound(Round round)
+    public void RequestStartRound(Round round, ClientRoundContext context)
     {
         // PhotonNetwork가 연결되어 있고, 아직 스폰 중이 아니면 시작
         if (PhotonNetwork.IsConnected && !isSpawning)
         {
-            StartCoroutine(StartRound(round));
+            StartCoroutine(StartRound(round, context));
         }
         else
         {

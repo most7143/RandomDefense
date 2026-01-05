@@ -34,7 +34,7 @@ public class UIRound : MonoBehaviour
     {
         if (monsterCountText != null)
         {
-            monsterCountText.text = $"Monsters: {count}/{maxCount}";
+            monsterCountText.text = $"{count}/{maxCount}";
         }
     }
 
