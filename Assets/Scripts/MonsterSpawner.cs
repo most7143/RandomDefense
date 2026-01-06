@@ -15,7 +15,7 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
 
     private bool isSpawning = false;
 
-    public event Action<Monster> OnMonsterSpawned;
+    public event Action OnMonsterSpawned;
 
 
     [Header("Move Points")]
@@ -58,17 +58,9 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
 
             if (monster.TryGetComponent(out PhotonView monsterPV))
             {
-                if (monsterPV.IsMine)
-                {
-                    context.OnMonsterSpawned();
-                    monster.OnDead += () =>
-                    {
-                        context.OnMonsterDead();
-                    };
-                }
+                OnMonsterSpawned?.Invoke();
+                monster.OnDead += context.OnMonsterDead;
             }
-
-            OnMonsterSpawned?.Invoke(monster);
 
             if (round.MaxSpawnCount == context.AliveMonsterCount)
             {
@@ -111,7 +103,6 @@ public class MonsterSpawner : MonoBehaviourPunCallbacks
         {
             Monster monsterComponent = monster.GetComponent<Monster>();
             PhotonView monsterPV = monster.GetComponent<PhotonView>();
-            OnMonsterSpawned?.Invoke(monsterComponent);
 
 
             // 생성된 몬스터에 MovePoints 전달 (RPC 사용, 미러링 적용)

@@ -77,7 +77,7 @@ public class IngameManager : MonoBehaviourPunCallbacks
         round.OnRoundEnded += roundContext.ResetForNewRound;
         round.OnRoundEnded += StartGame;
 
-        Spawner.OnMonsterSpawned += OnMonsterSpawned;
+        Spawner.OnMonsterSpawned += roundContext.OnMonsterSpawned;
         round.OnRoundFailed += RequestGameFailed;
         SetRoundUIInitial();
     }
@@ -88,6 +88,8 @@ public class IngameManager : MonoBehaviourPunCallbacks
         round.OnRoundEnded += RoundUI.SetRound;
         roundContext.OnAliveMonsterCountChanged += count =>
         RoundUI.SetMonsterCount(count, round.MaxSpawnCount);
+
+        roundContext.OnAliveMonsterCountChanged.Invoke(0);
     }
 
     void Update()
@@ -136,13 +138,7 @@ public class IngameManager : MonoBehaviourPunCallbacks
 
     }
 
-    private void OnMonsterSpawned(Monster monster)
-    {
-        monster.OnDead += () =>
-        {
-            roundContext.OnMonsterDead();
-        };
-    }
+
 
     /// <summary>
     /// 위치를 미러링합니다 (Y축 기준 반전)

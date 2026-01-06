@@ -24,7 +24,7 @@ public class Monster : MonoBehaviourPunCallbacks
     private Vector3[] movePointPositions;
     public MirroringObject MirroringObject; // 미러링 기능 담당 클래스
 
-    public Action OnDead;
+    public event Action OnDead;
 
     void Awake()
     {
@@ -178,7 +178,9 @@ public class Monster : MonoBehaviourPunCallbacks
         {
             HP = 0;
 
-            OnDead.Invoke();
+            OnDead?.Invoke();
+
+            OnDead = null;
 
 
             // 몬스터 파괴 (네트워크 동기화)

@@ -10,7 +10,7 @@ public class ClientRoundContext
 
     public event Action OnLocalRoundCleared;
 
-    public event Action<int> OnAliveMonsterCountChanged;
+    public Action<int> OnAliveMonsterCountChanged;
 
 
     public void OnMonsterSpawned()
